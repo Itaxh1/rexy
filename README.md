@@ -22,3 +22,17 @@ npm test
 npm run build
 npm audit --audit-level=high
 ```
+
+## Cloudflare Pages
+
+Rexy is a static Vite SPA. Build it with the public HTTPS URL of the Render API,
+then direct-upload `dist` to the `rexy` Pages project:
+
+```sh
+VITE_API_BASE=https://rexy-api.tryoz.dev npm run build
+npx wrangler pages deploy dist --project-name=rexy
+```
+
+Cloudflare Pages supplies SPA fallback when the build does not contain a
+top-level `404.html`. The bundled demo fixture is synthetic and contains no
+local transcript data.
