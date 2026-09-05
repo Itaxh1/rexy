@@ -28,7 +28,7 @@ export default function App() {
   const [day, setDay] = useState('');
   const [refresh, setRefresh] = useState(0);
   const [showConnect, setShowConnect] = useState<boolean | null>(null);
-  const { fx, setFx, error, dayLoading, rollupsPending } = useActivity({ demo, token: session?.access_token ?? null, year, day, setDay, refresh });
+  const { fx, setFx, error, dayLoading, rollupsPending } = useActivity({ demo, token: session?.access_token ?? null, accountId: session?.user.id, year, day, setDay, refresh });
   const err = authError || error;
   const [openSession, setOpenSession] = useState<string | null>(null);
   const [view, setView] = useState<'activity' | 'devices'>('activity');
@@ -204,6 +204,7 @@ export default function App() {
         </div>
 
         {dayLoading && <p className="icmeta" role="status">Loading this day’s details…</p>}
+        {!dayLoading && <>
         <section className="sec" id="sessions">
           <Stats events={dayEvents} sessions={daySessions} tools={dayTools} />
           <TokenUsage usage={fx.tokens_by_source?.[day]} />
@@ -230,6 +231,7 @@ export default function App() {
           </div>
           <Tools tools={dayTools} />
         </section>
+        </>}
       </main>
       )}
       {openSession && (

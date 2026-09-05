@@ -154,12 +154,14 @@ main{max-width:1260px;margin:0 auto;padding:20px 16px 80px}
 .slh span{color:var(--ink-3);font-size:12px}
 .slh em{margin-left:auto;font-style:normal;color:var(--ink-3);font-size:12px}
 .slbars{overflow-x:auto;overflow-y:hidden;padding-bottom:9px}
-.slinner{display:flex;gap:3px;align-items:flex-end;height:40px}
+.slinner{display:flex;gap:3px;align-items:flex-end;height:60px;padding-top:20px}
 .sb{flex:0 0 7px;height:100%;border:0;padding:0;border-radius:2px;cursor:pointer;background:var(--tool);transition:transform .08s ease}
 .sb.user{background:var(--user)}
 .sb.agent{background:var(--agent)}
 .sb.fail{background:var(--crit)}
 .sb.running{background:var(--warn)}
+.sb{position:relative;height:40px}
+.ribbon-marker{position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:11px;line-height:14px;pointer-events:none}
 .sb:hover,.sb:focus-visible{transform:scaleY(1.12);outline:none;box-shadow:0 0 0 2px var(--surface),0 0 0 3.5px var(--ink-2)}
 
 /* themed scrollbar, ribbon only */
@@ -334,6 +336,7 @@ main{max-width:1260px;margin:0 auto;padding:20px 16px 80px}
 .ti.slop{background:color-mix(in srgb,var(--crit) 7%,transparent)}
 .tflag{background:var(--crit);color:#fff;border-radius:4px;padding:2px 8px;font-size:10.5px;letter-spacing:.02em;text-transform:none;font-weight:600}
 .tflag.warn{background:var(--warn);color:#221c00}
+.tflag.inferred{background:transparent;color:var(--ink-2);border:1px dashed var(--crit)}
 .toks{display:flex;gap:22px;flex-wrap:wrap;padding:12px 16px;border-top:1px solid var(--border);font-size:12px}
 .toks span{color:var(--ink-3)}
 .toks b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums;margin-right:5px}

@@ -1,6 +1,6 @@
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { loadEvent } from '../api';
-import { isFailed, isRunning, isSucceeded, SOURCES, fmtMs, type Ev, type EventDetail, type Sess, type Src, type Story } from '../data';
+import { CORRECTIVE, isFailed, isRunning, isSucceeded, SOURCES, fmtMs, type Ev, type EventDetail, type Sess, type Src, type Story } from '../data';
 
 /** Uniform bars in chronological order, one per event — the status-page pattern.
  *  Time-proportional placement left ~80% of a typical day empty and packed every
@@ -14,6 +14,10 @@ export default function Ribbon({
   const previews = useRef(new Map<string, EventDetail>());
   useEffect(() => { previews.current.clear(); setTip(null); }, [token, events]);
   const scroller = useRef<HTMLDivElement>(null);
+  const corrections = useMemo(() => new Set(story.filter(item => item.k === 'user' && CORRECTIVE.test(item.x.slice(0, 300)))
+    .map(item => `${item.s}:${item.t}`)), [story]);
+  const marker = (ev: Ev) => isFailed(ev.st) ? '❌' : ev.st === 'interrupted' ? '🛑'
+    : ev.k === 'user' && corrections.has(`${ev.s}:${ev.t}`) ? '🔄' : null;
 
   const lanes = useMemo(() => {
     const m: Record<Src, Ev[]> = { 'claude-code': [], codex: [] };
@@ -65,8 +69,8 @@ export default function Ribbon({
                     onClick={() => onOpen(ev.s)}
                     onKeyDown={e => { if (e.key === 'Escape') setTip(null); }}
                     aria-describedby={tip?.ev === ev ? tipId : undefined}
-                    aria-label={label(ev)}
-                  />
+                    aria-label={`${label(ev)}${marker(ev) === '🔄' ? ' · possible correction' : ''}`}
+                  >{marker(ev) && <span className="ribbon-marker" aria-hidden="true">{marker(ev)}</span>}</button>
                 ))}
               </div>
             </div>

@@ -17,9 +17,17 @@ describe('deterministic intervention labels', () => {
     const html = renderToStaticMarkup(<Timeline story={story} events={events} onOpen={() => {}} />);
 
     expect(html).toContain('possible correction or repetition');
+    expect(html).toContain('🔄');
+    expect(html).toContain('❌');
     expect(html).toContain('Edit ×1');
     expect(html).toContain('Bash ×1');
     expect(html).toContain('1 failed');
+  });
+
+  it('does not mistake IDE context for a user interruption', () => {
+    const html = renderToStaticMarkup(<Timeline onOpen={() => {}} events={[]}
+      story={[{ t: 100, d: '2026-09-04', s: 's', src: 'codex', k: 'user', x: '<ide_opened_file>test.ts</ide_opened_file>' }]} />);
+    expect(html).not.toContain('you stopped it');
   });
 
   it('does not assign a concurrent session’s tools to a prompt', () => {

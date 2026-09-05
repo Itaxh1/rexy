@@ -7,12 +7,12 @@ export default function ActivityTimeline({ day, sessions, events, story, token, 
   day: string; sessions: Sess[]; events: Ev[]; story: Story[];
   token: string | null; onOpen: (id: string) => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   const detailId = useId();
   return <>
     <div className="sec-h">
       <h2>When it happened</h2>
-      <span className="n">TLDR first · expand for prompts and tool calls</span>
+      <span className="n">TLDR, prompts, tool calls, and corrections</span>
       <button className="link timeline-toggle" aria-expanded={expanded} aria-controls={detailId}
               onClick={() => setExpanded(value => !value)}>
         {expanded ? 'Collapse timeline' : 'Expand timeline'}

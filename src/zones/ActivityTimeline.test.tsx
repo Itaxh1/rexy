@@ -25,26 +25,26 @@ afterEach(async () => { await act(async () => root.unmount()); container.remove(
 const renderTimeline = () => act(async () => root.render(<ActivityTimeline day={session.d}
   sessions={[session]} events={events} story={story} token="browser" onOpen={vi.fn()} />));
 
-it('shows TLDR first and mounts the original ribbon/exchanges only after expanding', async () => {
+it('shows TLDR, ribbon and exchanges on load, with optional collapse', async () => {
   await renderTimeline();
   expect(container.textContent).toContain(session.summary);
-  expect(container.querySelectorAll('.sb')).toHaveLength(0);
-  expect(loadEvent).not.toHaveBeenCalled();
-  const toggle = container.querySelector<HTMLButtonElement>('[aria-expanded]')!;
-  expect(toggle.getAttribute('aria-expanded')).toBe('false');
-  await act(async () => toggle.click());
   expect(container.querySelectorAll('.sb')).toHaveLength(2);
   expect(container.querySelectorAll('.ti')).toHaveLength(1);
+  expect(loadEvent).not.toHaveBeenCalled();
+  const toggle = container.querySelector<HTMLButtonElement>('[aria-expanded]')!;
   expect(toggle.getAttribute('aria-expanded')).toBe('true');
   await act(async () => toggle.click());
   expect(container.querySelectorAll('.sb')).toHaveLength(0);
+  expect(toggle.getAttribute('aria-expanded')).toBe('false');
+  expect(container.textContent).toContain(session.summary);
+  await act(async () => toggle.click());
+  expect(container.querySelectorAll('.sb')).toHaveLength(2);
 });
 
 it('shows the actual prompt safely and lazily loads tool input/output on focus', async () => {
   vi.mocked(loadEvent).mockImplementation(async id => ({ id, content: null,
     tool_input: id === '2' ? 'npm test' : null, tool_output: id === '2' ? '42 passed' : null, truncated: false }));
   await renderTimeline();
-  await act(async () => container.querySelector<HTMLButtonElement>('[aria-expanded]')!.click());
   const buttons = container.querySelectorAll<HTMLButtonElement>('.sb');
   await act(async () => buttons[0].focus());
   expect(container.querySelector('[role=tooltip]')?.textContent).toContain(story[0].x);

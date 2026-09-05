@@ -1,6 +1,7 @@
 import { CORRECTIVE, isFailed, SOURCES, type Ev, type Story } from '../data';
 
-const NOISE = /^\s*(\[Request interrupted|<ide_opened_file|<system-reminder|<local-command|<command-)/;
+const INTERRUPTED = /^\s*\[Request interrupted/i;
+const NOISE = /^\s*(<ide_opened_file|<system-reminder|<local-command|<command-)/;
 
 type Item = {
   t: number; s: string; src: Story['src'];
@@ -16,7 +17,7 @@ export default function Timeline({
   story, events, onOpen,
 }: { story: Story[]; events: Ev[]; onOpen: (id: string) => void }) {
 
-  const asks = story.filter(s => s.k === 'user').sort((a, b) => a.t - b.t);
+  const asks = story.filter(s => s.k === 'user' && !NOISE.test(s.x)).sort((a, b) => a.t - b.t);
   const items: Item[] = [];
   const prev = new Map<string, string[]>();
 
@@ -26,7 +27,7 @@ export default function Timeline({
     const byTool = new Map<string, number>();
     for (const e of span) if (e.n) byTool.set(e.n, (byTool.get(e.n) ?? 0) + 1);
 
-    const interrupted = NOISE.test(a.x);
+    const interrupted = INTERRUPTED.test(a.x);
     const previous = prev.get(a.s) ?? [];
     const repeated = !interrupted &&
       (CORRECTIVE.test(a.x.slice(0, 300)) || previous.slice(-3).some(p => overlap(p, a.x) > 0.6));
@@ -57,9 +58,9 @@ export default function Timeline({
               <div className="tbody">
                 <div className="tkind">
                   {src.label}
-                  {it.slop === 'repeated' && <span className="tflag">possible correction or repetition</span>}
-                  {it.slop === 'interrupted' && <span className="tflag">you stopped it</span>}
-                  {it.failed > 0 && <span className="tflag warn">{it.failed} failed</span>}
+                  {it.slop === 'repeated' && <span className="tflag inferred"><span aria-hidden="true">🔄 </span>possible correction or repetition</span>}
+                  {it.slop === 'interrupted' && <span className="tflag"><span aria-hidden="true">🛑 </span>you stopped it</span>}
+                  {it.failed > 0 && <span className="tflag warn"><span aria-hidden="true">❌ </span>{it.failed} failed</span>}
                 </div>
                 <button className="link ttext" onClick={() => onOpen(it.s)}>{it.ask}</button>
                 {it.did.length > 0 && (
