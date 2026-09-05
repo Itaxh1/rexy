@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "deploy": "npm run build && wrangler deploy",
     "test": "vitest run",
     "preview": "vite preview"
   },
@@ -19,6 +20,7 @@
     "@vitejs/plugin-react": "6.1.1",
     "typescript": "^5.6.3",
     "vite": "8.2.2",
-    "vitest": "4.1.6"
+    "vitest": "4.1.6",
+    "wrangler": "4.129.0"
   }
 }

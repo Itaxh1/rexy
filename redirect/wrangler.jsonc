@@ -1,0 +1,13 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "rexy-entry",
+  "main": "index.mjs",
+  "compatibility_date": "2026-09-04",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [
+    { "pattern": "baememory.com/*", "zone_name": "baememory.com" }
+  ],
+  "observability": { "enabled": true, "head_sampling_rate": 0.1, "logs": { "invocation_logs": false } }
+}

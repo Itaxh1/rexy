@@ -1,6 +1,8 @@
 .env
 .env.*
 !.env.example
+!.env.production
+.wrangler/
 node_modules/
 dist/
 *.tsbuildinfo
