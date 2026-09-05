@@ -25,7 +25,7 @@ afterEach(async () => { await act(async () => root.unmount()); container.remove(
 const renderTimeline = () => act(async () => root.render(<ActivityTimeline day={session.d}
   sessions={[session]} events={events} story={story} token="browser" onOpen={vi.fn()} />));
 
-it('shows TLDR, ribbon and exchanges on load, with optional collapse', async () => {
+it('keeps the ribbon visible and collapses only the exchanges', async () => {
   await renderTimeline();
   expect(container.textContent).toContain(session.summary);
   expect(container.querySelectorAll('.sb')).toHaveLength(2);
@@ -34,11 +34,14 @@ it('shows TLDR, ribbon and exchanges on load, with optional collapse', async () 
   const toggle = container.querySelector<HTMLButtonElement>('[aria-expanded]')!;
   expect(toggle.getAttribute('aria-expanded')).toBe('true');
   await act(async () => toggle.click());
-  expect(container.querySelectorAll('.sb')).toHaveLength(0);
+  // The ribbon now sits above the collapsible region, so it survives the toggle;
+  // only the per-exchange list is hidden.
+  expect(container.querySelectorAll('.sb')).toHaveLength(2);
+  expect(container.querySelectorAll('.ti')).toHaveLength(0);
   expect(toggle.getAttribute('aria-expanded')).toBe('false');
   expect(container.textContent).toContain(session.summary);
   await act(async () => toggle.click());
-  expect(container.querySelectorAll('.sb')).toHaveLength(2);
+  expect(container.querySelectorAll('.ti')).toHaveLength(1);
 });
 
 it('shows the actual prompt safely and lazily loads tool input/output on focus', async () => {

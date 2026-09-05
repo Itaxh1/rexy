@@ -178,7 +178,11 @@ export default function App() {
 
       {view === 'devices' ? <DevicesPage token={session?.access_token ?? null} /> : (
       <main>
-        {!demo && fx.stats.strokes === 0 && <div className="connection-status" role="status">
+        {/* Only claim there is no activity once the counts have settled. While
+            rollups are being recomputed the year total can read 0, which made this
+            multi-line block appear and disappear, shoving the page up and down.
+            Line 66 already guards showConnect the same way. */}
+        {!demo && !rollupsPending && fx.stats.strokes === 0 && <div className="connection-status" role="status">
           <strong>Waiting for activity</strong>
           <p>Keep Linus running. This dashboard refreshes automatically as history arrives.
             {' '}<button className="link" onClick={() => setView('devices')}>Check devices</button></p>
@@ -190,7 +194,7 @@ export default function App() {
           </div>
           <Rail fx={fx} days={days} selected={day} onSelect={setDay}
                 year={year} onYear={setYear} />
-          {rollupsPending && <p className="icmeta" role="status">Updating calendar counts from received history…</p>}
+          <div className="statusslot" role="status">{rollupsPending ? 'Updating calendar counts from received history…' : ''}</div>
         </section>
 
         <div className="dayhead">
@@ -203,8 +207,10 @@ export default function App() {
           </span>
         </div>
 
-        {dayLoading && <p className="icmeta" role="status">Loading this day’s details…</p>}
-        {!dayLoading && <>
+        {/* Fixed-height slot: the message fades in place instead of pushing
+            everything below it down and pulling it back up. */}
+        <div className="statusslot" role="status">{dayLoading ? 'Loading this day’s details…' : ''}</div>
+        <div className={`daybody${dayLoading ? ' is-stale' : ''}`} aria-busy={dayLoading}>
         <section className="sec" id="sessions">
           <Stats events={dayEvents} sessions={daySessions} tools={dayTools} />
           <TokenUsage usage={fx.tokens_by_source?.[day]} />
@@ -231,7 +237,7 @@ export default function App() {
           </div>
           <Tools tools={dayTools} />
         </section>
-        </>}
+        </div>
       </main>
       )}
       {openSession && (

@@ -107,7 +107,7 @@ main{max-width:1260px;margin:0 auto;padding:20px 16px 80px}
 .cal{padding:22px 24px 18px}
 .calhead{display:flex;align-items:center;gap:12px;margin-bottom:16px}
 .calhead .yp{margin-left:auto}
-.calhead b{font-size:13px}
+.calhead b{font-variant-numeric:tabular-nums;font-size:13px}
 .calhead span{color:var(--ink-3);font-size:12px}
 .months{position:relative;height:17px;margin-left:42px;color:var(--ink-3);font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase}
 .months span{position:absolute;top:0;white-space:nowrap}
@@ -440,3 +440,26 @@ main{max-width:1260px;margin:0 auto;padding:20px 16px 80px}
 .mbox h3{margin:0 0 9px;font-size:16px;font-weight:640;letter-spacing:-.01em}
 .mbox p{margin:0;color:var(--ink-2);font-size:13px;line-height:1.6}
 .mact{display:flex;gap:9px;justify-content:flex-end;margin-top:22px}
+
+/* ---------- stable layout while data loads ---------- */
+/* Reloading a day used to unmount ~1000px of content and replace it with one
+   line of text, every 3 seconds during an import. The content now stays put and
+   is simply marked stale. */
+.statusslot{height:18px;line-height:18px;margin:0 0 6px;padding:0 2px;
+  color:var(--ink-3);font-size:12px;overflow:hidden}
+.daybody{transition:opacity .18s ease}
+.daybody.is-stale{opacity:.5}
+@media (prefers-reduced-motion: reduce){ .daybody{transition:none} }
+
+/* Reserve the height of the two panels whose size is knowable in advance, so
+   they do not grow into place as rows arrive. */
+.rib{min-height:150px}
+.cal{min-height:206px}          /* 7 rows x 16px + 6 gaps x 4px + chrome */
+
+/* Live counters must not reflow horizontally as digits change. */
+.calhead b,.gsub,.lrate,.stat .v,.srstats dd,.astat,.dvstats dd,.tnum{
+  font-variant-numeric:tabular-nums}
+
+/* The waiting notice sits in the normal flow, so give the region a floor: it
+   fades in without displacing the calendar beneath it. */
+.connection-status{margin-bottom:14px}
