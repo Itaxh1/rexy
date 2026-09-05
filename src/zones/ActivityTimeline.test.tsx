@@ -78,7 +78,7 @@ it('positions hour labels at event boundaries and thins crowded labels without h
     t: new Date(2026, 8, 4, hour, index).getTime() }));
   await act(async () => root.render(<ActivityTimeline day={session.d} sessions={[session]}
     events={timed} story={[]} token={null} onOpen={vi.fn()} />));
-  const ticks = [...container.querySelectorAll<HTMLElement>('.slticks span')];
+  const ticks = Array.from(container.querySelectorAll<HTMLElement>('.slticks span'));
   expect(ticks.map(tick => tick.textContent)).toEqual(['08:00', '10:00']);
   expect(ticks.map(tick => tick.style.left)).toEqual(['0px', '50px']);
   expect(container.querySelectorAll('.sb')).toHaveLength(6);
