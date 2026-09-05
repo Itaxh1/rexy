@@ -11,12 +11,15 @@ export interface Sess {
 export interface Tool { name:string; count:number; ok:number; fail:number; p50:number; p90:number; max:number }
 export interface Roll { sessions:number; events:number; tools:number; ok:number; fail:number }
 export interface Tk { in:number; out:number; cr:number; cw:number; th:number }
+export interface AgentTokens extends Tk { total:number }
+export interface EventDetail { id:string; content:string|null; tool_input:string|null; tool_output:string|null; truncated:boolean }
 export interface Story { t:number; d:string; s:string; src:Src; k:'user'|'agent'; x:string }
 export interface Fixture {
   generated:string;
   rollups:Record<string, Partial<Record<Src, Roll>>>;
   sessions:Sess[]; events:Ev[]; tools:Tool[];
   tokens:Record<string,Tk>; story:Story[];
+  tokens_by_source?:Record<string, Partial<Record<Src,AgentTokens>>>;
   stats:{ files:number; corpus_gb:number; strokes:number };
 }
 

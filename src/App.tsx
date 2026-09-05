@@ -2,31 +2,36 @@ import { useEffect, useMemo, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import Auth from './auth/Auth';
 import Connect from './Connect';
+import DevicesPage from './pages/Devices';
 import Rail from './zones/Rail';
 import Stats from './zones/Stats';
-import Ribbon from './zones/Ribbon';
+import ActivityTimeline from './zones/ActivityTimeline';
+import TokenUsage from './zones/TokenUsage';
 import Sessions from './zones/Sessions';
-import Timeline from './zones/Timeline';
 import Tools from './zones/Tools';
-import { loadDashboard, requestSummary } from './api';
+import { requestSummary } from './api';
+import { useActivity } from './useActivity';
 import { getSupabase } from './lib/supabase';
 import { applyTheme, readTheme, type Theme } from './theme';
-import { addDays, dayKey, fmtDay, fmtTok, isFailed, isSucceeded, loadFixture, yearDays, type Fixture, type Tool } from './data';
+import { addDays, dayKey, fmtDay, isFailed, isSucceeded, yearDays, type Tool } from './data';
 
 
 export default function App() {
   const demo = new URLSearchParams(location.search).has('demo');
   const [session, setSession] = useState<Session | null>(null);
   const [authReady, setAuthReady] = useState(demo);
-  const [fx, setFx] = useState<Fixture | null>(null);
-  const [err, setErr] = useState<string | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
   const [actionErr, setActionErr] = useState<string | null>(null);
   const [year, setYear] = useState(
     () => Number(new URLSearchParams(location.search).get('year')) || new Date().getFullYear(),
   );
   const [day, setDay] = useState('');
   const [refresh, setRefresh] = useState(0);
+  const [showConnect, setShowConnect] = useState<boolean | null>(null);
+  const { fx, setFx, error, dayLoading, rollupsPending } = useActivity({ demo, token: session?.access_token ?? null, year, day, setDay, refresh });
+  const err = authError || error;
   const [openSession, setOpenSession] = useState<string | null>(null);
+  const [view, setView] = useState<'activity' | 'devices'>('activity');
   const [theme, setTheme] = useState<Theme>(
     () => (new URLSearchParams(location.search).get('theme') as Theme) || readTheme(),
   );
@@ -49,36 +54,17 @@ export default function App() {
       unsubscribe = () => listener.data.subscription.unsubscribe();
     }).catch(error => {
       if (active) {
-        setErr(String(error));
+        setAuthError(String(error));
         setAuthReady(true);
       }
     });
     return () => { active = false; unsubscribe(); };
   }, [demo]);
 
+  useEffect(() => { setShowConnect(null); }, [session?.user.id]);
   useEffect(() => {
-    const token = session?.access_token;
-    if (!demo && !token) {
-      setFx(null);
-      return;
-    }
-    setErr(null);
-    const requestedDay = day.startsWith(String(year)) ? day : undefined;
-    const source = demo ? loadFixture() : loadDashboard(year, token!, requestedDay);
-    source
-      .then(f => {
-        setFx(f);
-        const ds = Object.keys(f.rollups).sort();
-        setDay(current => current.startsWith(String(year)) ? current : ds[ds.length - 1] ?? `${year}-01-01`);
-      })
-      .catch(e => setErr(String(e)));
-  }, [demo, session?.access_token, year, day, refresh]);
-
-  useEffect(() => {
-    if (demo || !session || !fx) return;
-    const timer = window.setInterval(() => setRefresh(value => value + 1), 5_000);
-    return () => window.clearInterval(timer);
-  }, [demo, session, fx]);
+    if (fx) setShowConnect(current => current ?? (!demo && !rollupsPending && fx.stats.strokes === 0));
+  }, [demo, fx, rollupsPending]);
 
   const days = useMemo(() => yearDays(year), [year]);
   const dayEvents = useMemo(() => (fx ? fx.events.filter(e => e.d === day) : []), [fx, day]);
@@ -92,7 +78,6 @@ export default function App() {
     () => (fx ? fx.story.filter(s => s.d === day) : []),
     [fx, day],
   );
-  const dayTokens = fx?.tokens?.[day];
 
   const daySessions = useMemo(
     () => (fx ? fx.sessions.filter(s => s.d === day).sort((a, b) => a.start - b.start) : []),
@@ -151,15 +136,17 @@ export default function App() {
   if (!authReady) return <main><div className="panel"><div className="empty">Loading Rexy…</div></div></main>;
   if (err && !demo && !session) return <main><div className="panel"><div className="empty">Could not start Rexy.<br /><code>{err}</code></div></div></main>;
   if (!demo && !session) return <Auth />;
-  if (err) return <main><div className="panel"><div className="empty">Could not load data.<br /><code>{err}</code></div></div></main>;
+  if (err && !fx) return <main><div className="panel"><div className="empty">Could not load data.<br /><code>{err}</code><br /><button className="link" onClick={() => setRefresh(value => value + 1)}>Try again</button></div></div></main>;
   if (!fx) return <main><div className="panel"><div className="empty">Loading your activity…</div></div></main>;
-  if (!demo && session && fx.stats.strokes === 0) {
-    return <Connect token={session.access_token} onRefresh={() => setRefresh(value => value + 1)} onLogout={logout} />;
+  if (!demo && session && showConnect) {
+    return <Connect key={session.user.id} token={session.access_token}
+      onContinue={() => { setShowConnect(false); setDay(''); setRefresh(value => value + 1); }}
+      onRefresh={() => setRefresh(value => value + 1)} onLogout={logout} />;
   }
 
   return (
     <>
-      {actionErr && <div className="action-error" role="alert">{actionErr}</div>}
+      {(actionErr || err) && <div className="action-error" role="alert">{actionErr || `Could not refresh activity. Retrying automatically. ${err}`}</div>}
       <header className="top">
         <span className="logo">
           <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
@@ -170,9 +157,12 @@ export default function App() {
         </span>
         <nav className="nav">
           <span className="sl">/</span>
-          <button aria-current="true" onClick={() => document.getElementById('activity')?.scrollIntoView()}>Activity</button>
+          <button aria-current={view === 'activity'}
+                  onClick={() => { setView('activity'); document.getElementById('activity')?.scrollIntoView(); }}>Activity</button>
           <span className="sl">/</span>
-          <button onClick={() => document.getElementById('sessions')?.scrollIntoView()}>Sessions</button>
+          <button onClick={() => { setView('activity'); setTimeout(() => document.getElementById('sessions')?.scrollIntoView(), 0); }}>Sessions</button>
+          <span className="sl">/</span>
+          <button aria-current={view === 'devices'} onClick={() => setView('devices')}>Devices</button>
         </nav>
         <div className="spacer" />
         <span className="who">{demo ? 'Demo' : session?.user.email}</span>
@@ -186,7 +176,13 @@ export default function App() {
         </div>
       </header>
 
+      {view === 'devices' ? <DevicesPage token={session?.access_token ?? null} /> : (
       <main>
+        {!demo && fx.stats.strokes === 0 && <div className="connection-status" role="status">
+          <strong>Waiting for activity</strong>
+          <p>Keep Linus running. This dashboard refreshes automatically as history arrives.
+            {' '}<button className="link" onClick={() => setView('devices')}>Check devices</button></p>
+        </div>}
         <section className="sec" id="activity">
           <div className="sec-h">
             <h2>Your agents</h2>
@@ -194,6 +190,7 @@ export default function App() {
           </div>
           <Rail fx={fx} days={days} selected={day} onSelect={setDay}
                 year={year} onYear={setYear} />
+          {rollupsPending && <p className="icmeta" role="status">Updating calendar counts from received history…</p>}
         </section>
 
         <div className="dayhead">
@@ -206,28 +203,16 @@ export default function App() {
           </span>
         </div>
 
+        {dayLoading && <p className="icmeta" role="status">Loading this day’s details…</p>}
         <section className="sec" id="sessions">
           <Stats events={dayEvents} sessions={daySessions} tools={dayTools} />
-          {dayTokens && (
-            <div className="panel" style={{ marginTop: 10 }}>
-              <div className="toks">
-                {/* Cache read dwarfs fresh input by ~100,000x, so the breakdown is
-                    shown rather than one meaningless "tokens used" total. */}
-                <span><b>{fmtTok(dayTokens.out)}</b>written by the agent</span>
-                <span><b>{fmtTok(dayTokens.th)}</b>of that was thinking</span>
-                <span><b>{fmtTok(dayTokens.cr)}</b>re-read from cache</span>
-                <span><b>{fmtTok(dayTokens.in)}</b>fresh input</span>
-              </div>
-            </div>
-          )}
+          <TokenUsage usage={fx.tokens_by_source?.[day]} />
         </section>
 
         <section className="sec">
-          <div className="sec-h">
-            <h2>When it happened</h2>
-            <span className="n">every mark is one event · hover to inspect</span>
-          </div>
-          <Ribbon day={day} events={dayEvents} sessions={daySessions} onOpen={setOpenSession} />
+          <ActivityTimeline key={`${session?.user.id ?? 'demo'}:${day}`} day={day}
+            events={dayEvents} sessions={daySessions} story={dayStory}
+            token={session?.access_token ?? null} onOpen={setOpenSession} />
         </section>
 
         <section className="sec">
@@ -240,20 +225,13 @@ export default function App() {
 
         <section className="sec">
           <div className="sec-h">
-            <h2>What happened</h2>
-            <span className="n">each exchange, top to bottom · red marks work that had to be redone</span>
-          </div>
-          <Timeline story={dayStory} events={dayEvents} onOpen={setOpenSession} />
-        </section>
-
-        <section className="sec">
-          <div className="sec-h">
             <h2>Tool calls</h2>
             <span className="n">completed results and measured latency</span>
           </div>
           <Tools tools={dayTools} />
         </section>
       </main>
+      )}
       {openSession && (
         <SessionInspector
           session={daySessions.find(item => item.id === openSession)}

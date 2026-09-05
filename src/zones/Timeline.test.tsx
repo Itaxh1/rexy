@@ -16,9 +16,17 @@ describe('deterministic intervention labels', () => {
 
     const html = renderToStaticMarkup(<Timeline story={story} events={events} onOpen={() => {}} />);
 
-    expect(html).toContain('you had to repeat yourself');
+    expect(html).toContain('possible correction or repetition');
     expect(html).toContain('Edit ×1');
     expect(html).toContain('Bash ×1');
     expect(html).toContain('1 failed');
+  });
+
+  it('does not assign a concurrent session’s tools to a prompt', () => {
+    const html = renderToStaticMarkup(<Timeline onOpen={() => {}}
+      story={[{ t: 100, d: '2026-09-04', s: 'a', src: 'codex', k: 'user', x: 'Implement the plan' }]}
+      events={[{ t: 101, d: '2026-09-04', s: 'b', src: 'codex', k: 'tool', st: 'failed', n: 'WrongSessionTool' }]} />);
+    expect(html).not.toContain('WrongSessionTool');
+    expect(html).not.toContain('1 failed');
   });
 });

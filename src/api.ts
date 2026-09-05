@@ -1,4 +1,4 @@
-import type { Fixture } from './data';
+import type { EventDetail, Fixture } from './data';
 import { API_BASE } from './lib/supabase';
 
 async function request<T>(path: string, token: string, init?: RequestInit): Promise<T> {
@@ -14,13 +14,51 @@ async function request<T>(path: string, token: string, init?: RequestInit): Prom
     const body = await response.json().catch(() => null) as { detail?: string } | null;
     throw new Error(body?.detail || `API request failed (${response.status})`);
   }
+  if (response.status === 204) return undefined as T;
   return response.json() as Promise<T>;
 }
 
-export function loadDashboard(year: number, token: string, day?: string) {
+export function loadDashboard(year: number, token: string, day?: string, signal?: AbortSignal) {
   const params = new URLSearchParams({ year: String(year) });
   if (day) params.set('day', day);
-  return request<Fixture>(`/v1/dashboard?${params}`, token);
+  return request<Fixture>(`/v1/dashboard?${params}`, token, { signal });
+}
+
+export type CalendarData = Pick<Fixture, 'generated' | 'rollups'> & {
+  revision: number; rollups_pending: boolean; refresh_after_ms: number;
+};
+export type DayData = Pick<Fixture, 'sessions' | 'events' | 'story' | 'tools' | 'tokens' | 'tokens_by_source'>;
+
+export function loadEvent(id: string, token: string, signal?: AbortSignal) {
+  return request<EventDetail>(`/v1/events/${encodeURIComponent(id)}`, token, { signal, cache: 'no-store' });
+}
+
+export function loadCalendar(year: number, token: string, signal?: AbortSignal) {
+  return request<CalendarData>(`/v1/calendar?year=${year}`, token, { signal, cache: 'no-store' });
+}
+
+export function loadDay(date: string, token: string, signal?: AbortSignal) {
+  return request<DayData>(`/v1/day?date=${encodeURIComponent(date)}`, token, { signal, cache: 'no-store' });
+}
+
+export type Device = {
+  id: string;
+  name: string;
+  platform: string;
+  extractor_version: number;
+  created_at: string;
+  last_seen_at: string | null;
+  last_upload_at: string | null;
+  status: 'connected' | 'revoked' | 'expired';
+  sessions: number;
+};
+
+export function loadDevices(token: string, signal?: AbortSignal) {
+  return request<Device[]>('/v1/devices', token, { signal, cache: 'no-store' });
+}
+
+export function revokeDevice(id: string, token: string) {
+  return request<void>(`/v1/devices/${encodeURIComponent(id)}/revoke`, token, { method: 'POST' });
 }
 
 export async function createInstallCommand(token: string) {

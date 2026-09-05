@@ -16,20 +16,21 @@ export default function Timeline({
   story, events, onOpen,
 }: { story: Story[]; events: Ev[]; onOpen: (id: string) => void }) {
 
-  const asks = story.filter(s => s.k === 'user');
+  const asks = story.filter(s => s.k === 'user').sort((a, b) => a.t - b.t);
   const items: Item[] = [];
-  const prev: string[] = [];
+  const prev = new Map<string, string[]>();
 
   asks.forEach((a, i) => {
-    const next = asks[i + 1]?.t ?? Infinity;
-    const span = events.filter(e => e.t >= a.t && e.t < next && e.k === 'tool');
+    const next = asks.slice(i + 1).find(ask => ask.s === a.s)?.t ?? Infinity;
+    const span = events.filter(e => e.s === a.s && e.t >= a.t && e.t < next && e.k === 'tool');
     const byTool = new Map<string, number>();
     for (const e of span) if (e.n) byTool.set(e.n, (byTool.get(e.n) ?? 0) + 1);
 
     const interrupted = NOISE.test(a.x);
+    const previous = prev.get(a.s) ?? [];
     const repeated = !interrupted &&
-      (CORRECTIVE.test(a.x.slice(0, 300)) || prev.slice(-3).some(p => overlap(p, a.x) > 0.6));
-    if (!interrupted) prev.push(a.x);
+      (CORRECTIVE.test(a.x.slice(0, 300)) || previous.slice(-3).some(p => overlap(p, a.x) > 0.6));
+    if (!interrupted) { previous.push(a.x); prev.set(a.s, previous); }
 
     items.push({
       t: a.t, s: a.s, src: a.src,
@@ -50,17 +51,17 @@ export default function Timeline({
         {items.map((it, i) => {
           const src = SOURCES.find(x => x.id === it.src)!;
           return (
-            <li key={i} className={`ti${it.slop ? ' slop' : ''}`} onClick={() => onOpen(it.s)}>
+            <li key={i} className={`ti${it.slop ? ' slop' : ''}`}>
               <time>{new Date(it.t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</time>
               <span className="tdot" style={{ background: it.slop ? 'var(--crit)' : `var(${src.varName})` }} />
               <div className="tbody">
                 <div className="tkind">
                   {src.label}
-                  {it.slop === 'repeated' && <span className="tflag">you had to repeat yourself</span>}
+                  {it.slop === 'repeated' && <span className="tflag">possible correction or repetition</span>}
                   {it.slop === 'interrupted' && <span className="tflag">you stopped it</span>}
                   {it.failed > 0 && <span className="tflag warn">{it.failed} failed</span>}
                 </div>
-                <p className="ttext">{it.ask}</p>
+                <button className="link ttext" onClick={() => onOpen(it.s)}>{it.ask}</button>
                 {it.did.length > 0 && (
                   <p className="tdid">
                     {it.did.map(d => <code key={d}>{d}</code>)}
