@@ -6,6 +6,25 @@ import { CORRECTIVE, isFailed, isRunning, isSucceeded, SOURCES, fmtMs, type Ev, 
  *  Time-proportional placement left ~80% of a typical day empty and packed every
  *  event into an unhittable 100px band; sequence layout gives every event the same
  *  width and a real hit target, and overflow scrolls instead of compressing. */
+const PITCH = 10; // .sb flex-basis 7px + .slinner gap 3px
+
+/** Bars sit in chronological sequence, so time is not linear across the strip.
+ *  Ticks are placed at the first event of each hour, and thinned so labels never
+ *  collide — an hour with no activity simply has no tick. */
+function hourTicks(events: Ev[]) {
+  const out: { hour: number; index: number; label: string }[] = [];
+  let lastHour = -1, lastIndex = -Infinity;
+  events.forEach((ev, i) => {
+    const hour = new Date(ev.t).getHours();
+    if (hour === lastHour) return;
+    lastHour = hour;
+    if (i - lastIndex < 5) return;            // keep labels ~50px apart
+    lastIndex = i;
+    out.push({ hour, index: i, label: `${String(hour).padStart(2, '0')}:00` });
+  });
+  return out;
+}
+
 export default function Ribbon({
   events, sessions, story = [], token = null, onOpen,
 }: { day: string; events: Ev[]; sessions: Sess[]; story?: Story[]; token?: string | null; onOpen: (id: string) => void }) {
@@ -53,6 +72,11 @@ export default function Ribbon({
                      if (n !== e.currentTarget) n.scrollLeft = x;
                    });
                  }}>
+              <div className="slticks" style={{ minWidth: widest * 10 }}>
+                {hourTicks(evs).map(t => (
+                  <span key={t.hour} style={{ left: t.index * PITCH }}>{t.label}</span>
+                ))}
+              </div>
               <div className="slinner" style={{ minWidth: widest * 10 }}>
                 {evs.map((ev, i) => (
                   <button

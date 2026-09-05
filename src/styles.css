@@ -155,6 +155,12 @@ main{max-width:1260px;margin:0 auto;padding:20px 16px 80px}
 .slh em{margin-left:auto;font-style:normal;color:var(--ink-3);font-size:12px}
 .slbars{overflow-x:auto;overflow-y:hidden;padding-bottom:9px}
 .slinner{display:flex;gap:3px;align-items:flex-end;height:60px;padding-top:20px}
+/* Hour markers, positioned at the bar where each hour starts. Sequence layout
+   means time is non-linear across the strip, so the labels carry the truth. */
+.slticks{position:relative;height:15px;margin-bottom:2px}
+.slticks span{position:absolute;top:0;transform:translateX(-1px);color:var(--ink-3);
+  font-size:10.5px;font-variant-numeric:tabular-nums;white-space:nowrap;letter-spacing:.02em}
+.slticks span::after{content:"";position:absolute;left:0;top:14px;width:1px;height:5px;background:var(--border-2)}
 .sb{flex:0 0 7px;height:100%;border:0;padding:0;border-radius:2px;cursor:pointer;background:var(--tool);transition:transform .08s ease}
 .sb.user{background:var(--user)}
 .sb.agent{background:var(--agent)}
