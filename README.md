@@ -15,6 +15,14 @@ npm run dev
 `VITE_API_BASE` must point to the Rexy API backend. Supabase browser
 configuration is fetched from the backend's public configuration endpoint.
 
+On a normal page load, Rexy first checks the API's `/readyz` endpoint. A sleeping
+free Render instance shows a theme-matched startup screen; API/database readiness
+automatically opens the app. Checks are serial, time out after eight seconds per
+request, and retry after three seconds. After two minutes the screen offers
+manual retry instead of spinning forever. Offline clients resume on reconnect;
+`?demo=1` skips the backend entirely. Readiness checks stop once the app opens,
+and later refresh failures do not hide already loaded history.
+
 Run validation with:
 
 ```sh
