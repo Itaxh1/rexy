@@ -160,6 +160,9 @@ main{max-width:1260px;margin:0 auto;padding:20px 16px 80px}
 .slh em{margin-left:auto;font-style:normal;color:var(--ink-3);font-size:12px}
 .slbars{overflow-x:auto;overflow-y:hidden;padding-bottom:9px}
 .slinner{display:flex;gap:3px;align-items:flex-end;height:60px;padding-top:20px}
+.slinner.slvirtual{display:block;position:relative}
+.slvirtual .sb{position:absolute;bottom:0;width:7px}
+.overall-ribbons .slh{flex-wrap:wrap}
 /* Hour markers, positioned at the bar where each hour starts. Sequence layout
    means time is non-linear across the strip, so the labels carry the truth. */
 .slticks{position:relative;height:15px;margin-bottom:2px}

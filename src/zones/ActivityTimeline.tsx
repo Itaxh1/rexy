@@ -1,6 +1,7 @@
 import { useId, useMemo, useState } from 'react';
 import { SOURCES, type Ev, type Sess, type Story } from '../data';
 import SessionRibbons from './SessionRibbons';
+import Ribbon from './Ribbon';
 import { ribbonFromEvents, type DayRibbon } from '../dayRibbon';
 import Timeline from './Timeline';
 
@@ -24,6 +25,13 @@ export default function ActivityTimeline({ day, sessions, events, story, token, 
 
   return <>
     <div className="sec-h">
+      <h2>Overall activity</h2>
+      <span className="n">all sessions for this day · one mark per event</span>
+    </div>
+    {loading && !ribbon.events.length ? <div className="panel"><div className="empty" role="status">Loading overall ribbons…</div></div>
+      : <Ribbon key={day} day={day} events={ribbon.events} sessions={sessions} story={story} token={token} onOpen={onOpen} />}
+
+    <div className="sec-h timeline-expanded">
       <h2>When it happened</h2>
       <span className="n">every session on its own ribbon · hover a mark to inspect</span>
     </div>
