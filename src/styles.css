@@ -639,8 +639,8 @@ main{max-width:1260px;margin:0 auto;padding:20px 16px 80px}
 .pf-seg-key b{margin-right:4px;font-weight:620;color:var(--ink);font-variant-numeric:tabular-nums}
 .pf-seg-key em{margin-left:4px;font-style:normal;color:var(--ink-3)}
 .pf-sub{margin:22px 0 10px}
-.pf-cmd{display:grid;grid-template-columns:44px minmax(0,1fr) 64px;gap:12px;align-items:center;padding:4px 0}
-.pf-cmd code{font-family:var(--mono);font-size:12px}
+.pf-cmd{display:grid;grid-template-columns:minmax(0,min(40%,16ch)) minmax(0,1fr) 64px;gap:12px;align-items:center;padding:4px 0}
+.pf-cmd code{min-width:0;overflow-wrap:anywhere;font-family:var(--mono);font-size:12px}
 .pf-cmd span{font-size:12px;text-align:right;color:var(--ink-2);font-variant-numeric:tabular-nums}
 
 /* achievements */
