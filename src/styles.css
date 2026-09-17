@@ -69,6 +69,8 @@ button,input,select{font:inherit;color:inherit}
 .top{display:flex;align-items:center;gap:20px;height:56px;padding:0 22px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:30}
 .logo{display:flex;align-items:center;gap:9px;font-weight:700;font-size:15px;letter-spacing:.02em;text-transform:uppercase}
 .logo svg{display:block}
+.rexy-mark{display:block;flex-shrink:0}
+.rexy-mark-accent{stroke:var(--a4)}
 .nav{display:flex;align-items:center;gap:13px;font-size:11px;font-weight:600;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-2)}
 .nav .sl{color:var(--border-2);font-weight:400}
 .nav button{background:none;border:0;padding:0;cursor:pointer;color:inherit;font:inherit;letter-spacing:inherit;text-transform:inherit}
@@ -82,7 +84,21 @@ button,input,select{font:inherit;color:inherit}
 .tog button{min-width:32px;padding:0 9px;border:0;background:var(--surface);cursor:pointer;color:var(--ink-3);font-size:11px;font-weight:600;letter-spacing:.06em;display:grid;place-items:center}
 .tog button+button{border-left:1px solid var(--border)}
 .tog button[aria-pressed="true"]{background:var(--sel-bg);color:var(--sel-ink)}
-.who{color:var(--ink-3);font-size:11px;letter-spacing:.09em;text-transform:uppercase}
+.who{max-width:220px;overflow:hidden;color:var(--ink-3);font-size:11px;letter-spacing:.09em;text-transform:uppercase;
+  white-space:nowrap;text-overflow:ellipsis}
+/* The bar never widens the page. On one row it needs ~1050px (the "/" separators pick up
+   .sl padding), so narrower screens hide the email (Profile shows it), then tighten the
+   separators, then give the nav its own row, which scrolls sideways if it still overflows. */
+.nav{min-width:0;overflow-x:auto;padding-block:6px;scrollbar-width:none}
+.nav::-webkit-scrollbar{display:none}
+.nav>*,.top>:not(.nav):not(.spacer){flex:none}
+@media (max-width:1320px){.who{display:none}}
+@media (max-width:1180px){.nav .sl{padding:0 5px}}
+@media (max-width:920px){
+  .top{flex-wrap:wrap;height:auto;min-height:56px;column-gap:12px;row-gap:0;padding:8px 16px}
+  .nav{order:1;flex-basis:100%}
+  .nav>.sl:first-child{display:none}
+}
 .btn{height:28px;padding:0 9px;border:1px solid var(--border-2);background:var(--surface);border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
 .btn:hover{background:var(--surface-2)}
 .btn.sq{width:28px;padding:0;justify-content:center}
@@ -246,7 +262,8 @@ main{max-width:1260px;margin:0 auto;padding:20px 16px 80px}
 .auth{min-height:100vh;display:grid;grid-template-columns:1.05fr .95fr}
 .aleft{background:var(--ink);color:var(--plane);padding:48px 46px;display:flex;flex-direction:column;justify-content:space-between}
 .amark{display:flex;align-items:center;gap:13px;font-size:30px;font-weight:700;letter-spacing:-.01em;text-transform:uppercase}
-.amark svg{color:var(--acid)}
+.amark .rexy-mark{color:inherit}
+.amark .rexy-mark-accent{stroke:currentColor}
 .atag{margin:0;font-size:19px;line-height:1.45;max-width:22ch;letter-spacing:-.01em;color:var(--plane)}
 .afoot{display:flex;gap:11px;align-items:center;font-size:10.5px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;opacity:.62}
 .afoot i{font-style:normal;opacity:.45}
@@ -567,3 +584,235 @@ main{max-width:1260px;margin:0 auto;padding:20px 16px 80px}
   .srb-legend-note{margin-left:0}
 }
 @media (prefers-reduced-motion:reduce){.srb-caret{transition:none}}
+
+/* ---------- profile ---------- */
+/* Built on dashboard primitives (.panel, .sec-h, calendar .c cells on the --a ramp,
+   .tbar, .pill, .btn). New pieces follow the same rules: uppercase micro labels,
+   tabular numbers, 1px borders, 8px radii, colour only where it carries meaning. */
+.pf-label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.pf-muted{color:var(--ink-3)}
+
+/* header: identity, then totals. The 1px grid gap draws the cell dividers. */
+.pf-hero{margin:6px 0 26px;overflow:hidden}
+.pf-id{display:flex;align-items:center;gap:14px;padding:18px 22px}
+.pf-id>div{min-width:0}
+.pf-avatar{display:grid;place-items:center;flex:none;width:42px;height:42px;border:1px solid var(--border-2);border-radius:50%;
+  background:var(--surface-2);color:var(--ink-2);font-size:16px;font-weight:650}
+.pf-id h1{margin:0;font-size:19px;font-weight:650;line-height:1.25;letter-spacing:-.015em;overflow-wrap:anywhere}
+.pf-id p{margin:3px 0 0;font-size:12.5px;color:var(--ink-3)}
+.pf-asof{align-self:flex-start;margin-left:auto;padding-top:2px;white-space:nowrap;font-size:11.5px;color:var(--ink-3)}
+.pf-totals{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:1px;margin:0;border-top:1px solid var(--border);background:var(--border)}
+.pf-totals div{padding:16px 22px 18px;background:var(--surface)}
+.pf-totals dt{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.pf-totals dd{margin:8px 0 0;font-size:28px;font-weight:650;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.pf-totals p{margin:7px 0 0;font-size:12px;color:var(--ink-2);font-variant-numeric:tabular-nums}
+
+/* consistency */
+.pf-streak{display:grid;grid-template-columns:minmax(0,290px) minmax(0,1fr)}
+.pf-figures{margin:0;border-right:1px solid var(--border)}
+.pf-figures div{padding:16px 22px}
+.pf-figures div+div{border-top:1px solid var(--border)}
+.pf-figures dt{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.pf-figures dd{margin:6px 0 0;font-size:28px;font-weight:650;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.pf-figures dd small{margin-left:6px;font-size:12px;font-weight:500;letter-spacing:0;color:var(--ink-3)}
+.pf-figures p{margin:6px 0 0;font-size:12px;color:var(--ink-2)}
+.pf-weeks{display:flex;flex-direction:column;justify-content:center;min-width:0;padding:20px 24px}
+.pf-weeks-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:12px;font-size:12px}
+.pf-cells,.pf-months{display:grid;grid-template-columns:repeat(26,minmax(0,28px));gap:5px;justify-content:start}
+.pf-cell.c{width:auto;height:auto;aspect-ratio:1;border-radius:4px;cursor:default}
+.pf-cell[data-run="1"]{box-shadow:0 0 0 2px var(--surface),0 0 0 3.5px var(--ink-2)}
+.pf-months{margin-top:7px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);white-space:nowrap}
+.calfoot.pf-legend{margin:16px 0 0}
+
+/* records + pattern */
+.pf-cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 18px;align-items:start}
+.pf-rec{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(130px,auto);gap:16px;align-items:baseline;padding:13px 18px}
+.pf-rec+.pf-rec{border-top:1px solid var(--border)}
+.pf-rec-label{color:var(--ink-2)}
+.pf-rec b{font-weight:620;font-variant-numeric:tabular-nums;text-align:right}
+.pf-rec .pf-muted{font-size:12px;text-align:right;font-variant-numeric:tabular-nums}
+.pf-pattern{padding:18px}
+.pf-seg{display:flex;gap:2px;height:12px;overflow:hidden;border-radius:4px}
+.pf-seg i{display:block;height:100%}
+.pf-seg-key{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 16px;margin-top:12px;font-size:12px;color:var(--ink-2)}
+.pf-seg-key i{display:inline-block;width:8px;height:8px;margin-right:7px;border-radius:2px}
+.pf-seg-key b{margin-right:4px;font-weight:620;color:var(--ink);font-variant-numeric:tabular-nums}
+.pf-seg-key em{margin-left:4px;font-style:normal;color:var(--ink-3)}
+.pf-sub{margin:22px 0 10px}
+.pf-cmd{display:grid;grid-template-columns:44px minmax(0,1fr) 64px;gap:12px;align-items:center;padding:4px 0}
+.pf-cmd code{font-family:var(--mono);font-size:12px}
+.pf-cmd span{font-size:12px;text-align:right;color:var(--ink-2);font-variant-numeric:tabular-nums}
+
+/* achievements */
+.pf-badges{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,270px),1fr));gap:12px}
+.pf-badge{display:grid;grid-template-columns:48px minmax(0,1fr);gap:14px;padding:18px 16px;min-height:146px;
+  background:var(--surface);border:1px solid var(--border);border-radius:8px}
+.pf-icon{display:grid;place-items:center;width:48px;height:48px;color:var(--ink-2)}
+.pf-badge-art{display:block;overflow:visible}
+.pf-badge[data-status="earned"] .pf-icon{color:var(--a4)}
+.pf-badge[data-status="untracked"] .pf-icon{color:var(--ink-3)}
+.pf-badge-body{min-width:0;display:flex;flex-direction:column}
+.pf-badge-top{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px}
+.pf-badge-top b{font-size:13.5px;font-weight:620}
+.pf-badge-state{display:inline-flex;align-items:center;gap:4px;margin-left:auto;white-space:nowrap;font-size:10px;font-weight:500;color:var(--ink-3)}
+.pf-badge[data-status="earned"] .pf-badge-state{color:var(--ink-2)}
+.pf-badge p{margin:6px 0 14px;font-size:12px;line-height:1.45;color:var(--ink-2)}
+.pf-bar{height:3px;flex-shrink:0;margin-top:auto;overflow:hidden;border-radius:2px;background:var(--surface-2)}
+.pf-bar i{display:block;height:100%;border-radius:2px;background:var(--a3)}
+.pf-badge-value{display:block;margin-top:5px;font-size:11.5px;font-variant-numeric:tabular-nums}
+
+@media (max-width:880px){
+  .pf-totals{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .pf-totals div:last-child{grid-column:span 2}
+  .pf-streak{grid-template-columns:minmax(0,1fr)}
+  .pf-figures{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-right:0;border-bottom:1px solid var(--border)}
+  .pf-figures div+div{border-top:0;border-left:1px solid var(--border)}
+  .pf-cols{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:560px){
+  .pf-id{padding:16px}
+  .pf-asof{display:none}
+  .pf-totals{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .pf-totals div{padding:14px 16px 16px}
+  .pf-totals div:last-child{grid-column:1/-1}
+  .pf-figures{grid-template-columns:minmax(0,1fr)}
+  .pf-figures div+div{border-left:0;border-top:1px solid var(--border)}
+  .pf-cells,.pf-months{gap:2px}
+  .pf-months{font-size:9px}
+}
+
+/* ---------- projects page ---------- */
+/* One application panel. On desktop the page never scrolls: the title bar, list header,
+   reader header and file tabs stay fixed, and only the project list and the open file
+   scroll, each with a themed scrollbar. Small or short screens fall back to page flow. */
+.pj-label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.pj-muted{color:var(--ink-3)}
+.pj-scroll{overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--border-3) transparent}
+.pj-scroll::-webkit-scrollbar{width:10px}
+.pj-scroll::-webkit-scrollbar-track{background:transparent}
+.pj-scroll::-webkit-scrollbar-thumb{border:3px solid transparent;border-radius:6px;background:var(--border-2) padding-box}
+.pj-scroll::-webkit-scrollbar-thumb:hover{background:var(--border-3) padding-box}
+
+main.pj{padding-bottom:24px}
+.pj-app{display:flex;flex-direction:column;overflow:hidden}
+.pj-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px;flex:none;padding:14px 22px;border-bottom:1px solid var(--border)}
+.pj-head h1{margin:0;font-size:16px;font-weight:650;letter-spacing:-.01em}
+.pj-head p{margin:0;font-size:12.5px;color:var(--ink-3)}
+
+.pj-projects{display:grid;grid-template-columns:minmax(0,280px) minmax(0,1fr)}
+.pj-plist{display:flex;flex-direction:column;min-width:0;min-height:0;border-right:1px solid var(--border)}
+.pj-plist-h{display:flex;flex:none;align-items:baseline;justify-content:space-between;gap:8px;padding:12px 18px 11px;
+  border-bottom:1px solid var(--border);font-size:11.5px}
+.pj-ptabs{display:flex;flex:1;flex-direction:column;gap:2px;min-height:0;padding:8px}
+.pj-pitem{position:relative;display:flex;flex:none;flex-direction:column;gap:3px;width:100%;padding:9px 10px 9px 12px;border:0;border-radius:6px;
+  background:none;color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.pj-pitem:hover,.pj-pitem[aria-selected="true"]{background:var(--surface-2)}
+.pj-pitem[aria-selected="true"]::before{content:"";position:absolute;left:0;top:9px;bottom:9px;width:2px;border-radius:2px;background:var(--sel-bg)}
+.pj-pitem:focus-visible{outline:2px solid var(--sel-bg);outline-offset:-2px}
+.pj-pname{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-weight:600}
+.pj-pstate{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ink-2)}
+.pj-pstate[data-state="none"]{color:var(--ink-3)}
+.pj-pdays{margin-left:auto;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.pj-dot{display:inline-block;flex:none;width:6px;height:6px;border-radius:50%;background:var(--border-3)}
+.pj-dot[data-state="ready"]{background:var(--a3)}
+.pj-dot[data-state="question"],.pj-dot[data-state="stale"]{background:var(--warn)}
+.pj-dot[data-state="queued"]{background:var(--ink-2)}
+
+.pj-reader{display:flex;flex-direction:column;min-width:0;min-height:0}
+.pj-rhead{display:flex;flex:none;align-items:flex-start;gap:16px;padding:18px 26px 0}
+.pj-rhead>div{min-width:0}
+.pj-rhead h2{margin:0;font-size:17px;font-weight:650;letter-spacing:-.015em;overflow-wrap:anywhere}
+.pj-rmeta{margin:4px 0 0;font-size:12px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.pj-gen{margin:3px 0 0;font-size:12px;color:var(--ink-2)}
+.pj-rhead .pill{flex:none;margin-left:auto}
+.pj-filebar{display:flex;flex:none;flex-wrap:wrap;align-items:flex-end;gap:8px 12px;margin-top:16px;padding:0 26px;border-bottom:1px solid var(--border)}
+.pj-files{display:flex;gap:4px}
+.pj-filetab{margin-bottom:-1px;padding:8px 12px 9px;border:0;border-bottom:2px solid transparent;background:none;cursor:pointer;
+  color:var(--ink-3);font-family:var(--mono);font-size:12px;font-weight:600}
+.pj-filetab:hover{color:var(--ink)}
+.pj-filetab[aria-selected="true"]{border-bottom-color:var(--sel-bg);color:var(--ink)}
+.pj-filetab:focus-visible{outline:2px solid var(--sel-bg);outline-offset:-2px;border-radius:4px}
+.pj-tools{display:flex;align-items:center;gap:6px;margin-left:auto;padding-bottom:7px}
+.pj-toggle{display:inline-flex;padding:2px;border:1px solid var(--border-2);border-radius:6px;background:var(--surface)}
+.pj-toggle button{height:22px;padding:0 9px;border:0;border-radius:4px;background:none;color:var(--ink-3);font-size:11.5px;cursor:pointer}
+.pj-toggle button:hover{color:var(--ink)}
+.pj-toggle button[aria-pressed="true"]{background:var(--surface-3);color:var(--ink)}
+.pj-toggle button:focus-visible{outline:2px solid var(--sel-bg);outline-offset:-1px}
+.pj-tools .btn{font-size:12px}
+
+.pj-rbody{flex:1;min-height:0;padding:18px 26px 28px}
+.pj-queued{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;margin:0 0 16px;font-size:12.5px;color:var(--ink-2)}
+.pj-question{margin:0 0 20px;padding:14px 16px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2)}
+.pj-question-head{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+.pj-question-head b{font-size:13px;font-weight:620}
+.pj-question-head .pj-muted{font-size:12px}
+.pj-note{margin:10px 0 0;font-size:12.5px;color:var(--ink-2)}
+.pj-options{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px;margin-top:10px}
+.pj-option{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:10px 12px;cursor:pointer;text-align:left;
+  border:1px solid var(--border-2);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit}
+.pj-option:hover{border-color:var(--border-3)}
+.pj-option:focus-visible{outline:2px solid var(--sel-bg);outline-offset:1px}
+.pj-option[aria-pressed="true"]{border-color:var(--sel-bg);box-shadow:0 0 0 1px var(--sel-bg)}
+.pj-option-date{font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3)}
+.pj-option-quote{font-size:12.5px;line-height:1.5;color:var(--ink-2)}
+
+.pj-purpose{display:flex;flex-wrap:wrap;gap:4px 12px;margin:0 0 16px;font-size:12px;color:var(--ink-3)}
+.pj-count{margin-left:auto;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.pj-count[data-over="1"]{color:var(--crit)}
+.pj-source{margin:0;padding:14px 16px;border:1px solid var(--border);border-radius:6px;background:var(--surface-2);
+  font-family:var(--mono);font-size:12px;line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--ink)}
+.pj-front{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 16px;margin:0 0 18px;padding:12px 14px;
+  border:1px solid var(--border);border-radius:6px;background:var(--surface-2)}
+.pj-front div{display:contents}
+.pj-front dt{font-family:var(--mono);font-size:11.5px;line-height:1.6;color:var(--ink-3)}
+.pj-front dd{margin:0;font-size:12.5px;line-height:1.5;color:var(--ink-2);overflow-wrap:anywhere}
+.pj-install{margin:18px 0 0;padding-top:14px;border-top:1px solid var(--border);font-size:12px;color:var(--ink-3)}
+.pj-install code{font-family:var(--mono);font-size:11.5px;color:var(--ink-2);overflow-wrap:anywhere}
+
+/* generated Markdown: a document, not a code block */
+.pj-md{max-width:76ch;font-size:13px;line-height:1.6;color:var(--ink-2)}
+.pj-md h3{margin:0 0 4px;font-size:16px;font-weight:650;letter-spacing:-.01em;color:var(--ink)}
+.pj-md h4{margin:22px 0 6px;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.pj-md h5{margin:16px 0 6px;font-size:12.5px;font-weight:620;color:var(--ink)}
+.pj-md p{margin:0 0 8px}
+.pj-md ul{margin:0;padding:0;list-style:none}
+.pj-md li{position:relative;padding:3px 0 3px 16px}
+.pj-md li::before{content:"";position:absolute;left:2px;top:13px;width:6px;height:1.5px;background:var(--border-3)}
+.pj-md code{padding:1px 5px;border:1px solid var(--border);border-radius:4px;background:var(--surface-2);
+  font-family:var(--mono);font-size:11.5px;color:var(--ink);overflow-wrap:anywhere}
+.pj-md strong{font-weight:620;color:var(--ink)}
+.pj-md em{margin-left:4px;font-style:normal;font-size:11.5px;white-space:nowrap;color:var(--ink-3);font-variant-numeric:tabular-nums}
+
+.pj-empty{padding:18px;border:1px solid var(--border);border-radius:8px}
+.pj-empty h3{margin:0;font-size:13.5px;font-weight:620}
+.pj-empty>p{max-width:72ch;margin:6px 0 0;font-size:12.5px;color:var(--ink-2)}
+.pj-filedefs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:16px 0}
+.pj-filedefs div{padding:12px 14px;border:1px solid var(--border);border-radius:6px;background:var(--surface-2)}
+.pj-filedefs dt{font-family:var(--mono);font-size:12px;font-weight:600}
+.pj-filedefs dd{margin:4px 0 0;font-size:12px;line-height:1.5;color:var(--ink-2)}
+
+/* Application mode: the app fills the window and the panel takes the height left under
+   the top bar, whatever that bar's height is at this width. */
+@media (min-width:881px) and (min-height:560px){
+  body:has(main.pj){overflow:hidden}
+  #root:has(> main.pj){display:flex;flex-direction:column;height:100vh;height:100dvh}
+  #root:has(> main.pj)>:not(main){flex:none}
+  main.pj{display:flex;flex:1;flex-direction:column;width:100%;min-height:0;padding-bottom:20px}
+  .pj-app{flex:1;min-height:0}
+  .pj-projects{flex:1;min-height:0;grid-template-rows:minmax(0,1fr)}
+}
+@media (max-width:880px){
+  .pj-head{padding:14px 16px}
+  .pj-projects{grid-template-columns:minmax(0,1fr)}
+  .pj-plist{border-right:0;border-bottom:1px solid var(--border)}
+  .pj-ptabs{max-height:260px}
+  .pj-rhead{padding:16px 16px 0}
+  .pj-filebar{padding:0 16px}
+  .pj-rbody{padding:16px 16px 22px}
+  .pj-filedefs{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:560px){
+  .pj-rhead{flex-wrap:wrap}
+  .pj-rhead .pill{margin-left:0}
+  .pj-tools{margin-left:0}
+}

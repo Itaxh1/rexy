@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { getSupabase } from '../lib/supabase';
+import RexyLogo from '../RexyLogo';
 
 export default function Auth() {
   const [mode, setMode] = useState<'in' | 'up'>('in');
@@ -54,14 +55,7 @@ export default function Auth() {
   return (
     <div className="auth">
       <div className="aleft">
-        <div className="amark">
-          <svg width="34" height="34" viewBox="0 0 20 20" aria-hidden="true">
-            <rect x="1" y="1" width="18" height="18" rx="3" fill="none" stroke="currentColor" strokeWidth="1.5" />
-            <path d="M5 13.5 9 6.5l3 5 1.2-2" fill="none" stroke="currentColor"
-                  strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          <span>Rexy</span>
-        </div>
+        <RexyLogo className="amark" size={42} />
         <p className="atag">Every prompt, every action, every day — one page.</p>
         <div className="afoot">
           <span>Claude Code</span><i>/</i><span>Codex</span><i>/</i><span>Private sync</span>

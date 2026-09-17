@@ -2,7 +2,7 @@ import type { EventDetail, Fixture } from './data';
 import type { DayRibbon } from './dayRibbon';
 import { API_BASE } from './lib/supabase';
 
-async function request<T>(path: string, token: string, init?: RequestInit): Promise<T> {
+export async function request<T>(path: string, token: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
     ...init,
     headers: {

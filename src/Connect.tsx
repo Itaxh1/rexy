@@ -1,4 +1,5 @@
 import InstallCommand from './InstallCommand';
+import RexyLogo from './RexyLogo';
 import { useDevices } from './useDevices';
 
 export default function Connect({ token, onContinue, onRefresh, onLogout }: {
@@ -12,14 +13,7 @@ export default function Connect({ token, onContinue, onRefresh, onLogout }: {
   return (
     <>
       <header className="top">
-        <span className="logo">
-          <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
-            <rect x="1" y="1" width="18" height="18" rx="3" fill="none" stroke="currentColor" strokeWidth="1.6" />
-            <path d="M5 13.5 9 6.5l3 5 1.2-2" fill="none" stroke="currentColor"
-                  strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          Rexy
-        </span>
+        <RexyLogo />
         <span className="spacer" />
         <button className="pill ghost" onClick={onLogout}>Log out</button>
       </header>

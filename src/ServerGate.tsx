@@ -1,11 +1,14 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { API_BASE } from './lib/supabase';
 import { applyTheme, readTheme, type Theme } from './theme';
+import RexyLogo from './RexyLogo';
 
 type State = 'checking' | 'starting' | 'offline' | 'unavailable' | 'ready';
 
 export default function ServerGate({ children }: { children: ReactNode }) {
-  const demo = new URLSearchParams(location.search).has('demo');
+  const params = new URLSearchParams(location.search);
+  // Saved views restore account-scoped data without waiting for Render to wake.
+  const demo = params.has('demo') || ['profile', 'projects'].includes(params.get('view') ?? '');
   const [state, setState] = useState<State>(demo ? 'ready' : 'checking');
   const [attempt, setAttempt] = useState(0);
 
@@ -78,7 +81,7 @@ export default function ServerGate({ children }: { children: ReactNode }) {
   const waiting = state === 'checking' || state === 'starting';
   return <main className="server-start">
     <section className="panel server-start-content" aria-busy={waiting}>
-      <div className="logo">Rexy</div>
+      <RexyLogo />
       <div role="status" aria-live="polite">
         <h1>{state === 'offline' ? 'You’re offline' : state === 'unavailable'
           ? 'The server isn’t responding' : state === 'checking'

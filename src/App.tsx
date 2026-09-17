@@ -2,7 +2,11 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import Auth from './auth/Auth';
 import Connect from './Connect';
+import RexyLogo from './RexyLogo';
 import DevicesPage from './pages/Devices';
+import ProfilePage, { LiveProfile } from './pages/Profile';
+import ProjectsPage, { LiveProjects } from './pages/Projects';
+import { clearSaved } from './savedCache';
 import Rail from './zones/Rail';
 import Stats from './zones/Stats';
 import ActivityTimeline from './zones/ActivityTimeline';
@@ -24,6 +28,7 @@ import { toolLabel } from './eventPresentation';
 export default function App() {
   const demo = new URLSearchParams(location.search).has('demo');
   const [session, setSession] = useState<Session | null>(null);
+  const accountRef = useRef<string | null>(null);
   const [authReady, setAuthReady] = useState(demo);
   const [authError, setAuthError] = useState<string | null>(null);
   const [actionErr, setActionErr] = useState<string | null>(null);
@@ -33,16 +38,24 @@ export default function App() {
   const [day, setDay] = useState('');
   const [refresh, setRefresh] = useState(0);
   const [showConnect, setShowConnect] = useState<boolean | null>(null);
+  const [view, setView] = useState<'activity' | 'devices' | 'projects' | 'profile'>(() => {
+    const requested = new URLSearchParams(location.search).get('view');
+    return requested === 'projects' || requested === 'profile' ? requested : 'activity';
+  });
+  const savedView = view === 'profile' || view === 'projects';
   const { fx, setFx, ribbon, error, dayLoading, extrasLoading, extrasAsOf, storyLoading, storyMore,
-    storyNewer, loadMoreStory, reloadStory, rollupsPending, calendarReady } = useActivity({ demo, token: session?.access_token ?? null, accountId: session?.user.id, year, day, setDay, refresh });
+    storyNewer, loadMoreStory, reloadStory, rollupsPending, calendarReady } = useActivity({ demo, token: savedView && !demo ? null : session?.access_token ?? null, accountId: session?.user.id, year, day, setDay, refresh });
   const err = authError || error;
   const [openSession, setOpenSession] = useState<string | null>(null);
-  const [view, setView] = useState<'activity' | 'devices'>('activity');
   const [theme, setTheme] = useState<Theme>(
     () => (new URLSearchParams(location.search).get('theme') as Theme) || readTheme(),
   );
 
   useEffect(() => { applyTheme(theme); }, [theme]);
+  useEffect(() => {
+    const url = new URL(location.href); url.searchParams.set('view', view);
+    history.replaceState(null, '', url);
+  }, [view]);
 
   useEffect(() => {
     if (demo) return;
@@ -51,11 +64,16 @@ export default function App() {
     getSupabase().then(async supabase => {
       const { data } = await supabase.auth.getSession();
       if (active) {
+        accountRef.current = data.session?.user.id ?? null;
         setSession(data.session);
         setAuthReady(true);
       }
       const listener = supabase.auth.onAuthStateChange((_event, next) => {
-        if (active) setSession(next);
+        if (active) {
+          if (accountRef.current && accountRef.current !== next?.user.id) void clearSaved(accountRef.current);
+          accountRef.current = next?.user.id ?? null;
+          setSession(next);
+        }
       });
       unsubscribe = () => listener.data.subscription.unsubscribe();
     }).catch(error => {
@@ -98,6 +116,7 @@ export default function App() {
   const dayTools = useMemo(() => toolStats(dayEvents), [dayEvents]);
 
   const logout = async () => {
+    if (session?.user.id) await clearSaved(session.user.id);
     if (!demo) await (await getSupabase()).auth.signOut();
     setSession(null);
     setFx(null);
@@ -127,9 +146,9 @@ export default function App() {
   if (!authReady) return <main><div className="panel"><div className="empty">Loading Rexy…</div></div></main>;
   if (err && !demo && !session) return <main><div className="panel"><div className="empty">Could not start Rexy.<br /><code>{err}</code></div></div></main>;
   if (!demo && !session) return <Auth />;
-  if (err && !fx) return <main><div className="panel"><div className="empty">Could not load data.<br /><code>{err}</code><br /><button className="link" onClick={() => setRefresh(value => value + 1)}>Try again</button></div></div></main>;
-  if (!fx) return <main><div className="panel"><div className="empty">Loading your activity…</div></div></main>;
-  if (!demo && session && showConnect) {
+  if (err && !fx && !savedView) return <main><div className="panel"><div className="empty">Could not load data.<br /><code>{err}</code><br /><button className="link" onClick={() => setRefresh(value => value + 1)}>Try again</button></div></div></main>;
+  if (!fx && !savedView) return <main><div className="panel"><div className="empty">Loading your activity…</div></div></main>;
+  if (!demo && session && showConnect && !savedView) {
     return <Connect key={session.user.id} token={session.access_token}
       onContinue={() => { setShowConnect(false); setDay(''); setRefresh(value => value + 1); }}
       onRefresh={() => setRefresh(value => value + 1)} onLogout={logout} />;
@@ -139,13 +158,7 @@ export default function App() {
     <>
       {(actionErr || err) && <div className="action-error" role="alert">{actionErr || `Could not refresh activity. Retrying automatically. ${err}`}</div>}
       <header className="top">
-        <span className="logo">
-          <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
-            <rect x="1" y="1" width="18" height="18" rx="3" fill="none" stroke="currentColor" strokeWidth="1.6" />
-            <path d="M5 13.5 9 6.5l3 5 1.2-2" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          Rexy
-        </span>
+        <RexyLogo />
         <nav className="nav">
           <span className="sl">/</span>
           <button aria-current={view === 'activity'}
@@ -153,7 +166,11 @@ export default function App() {
           <span className="sl">/</span>
           <button onClick={() => { setView('activity'); setTimeout(() => document.getElementById('sessions')?.scrollIntoView(), 0); }}>Sessions</button>
           <span className="sl">/</span>
+          <button aria-current={view === 'projects'} onClick={() => setView('projects')}>Projects</button>
+          <span className="sl">/</span>
           <button aria-current={view === 'devices'} onClick={() => setView('devices')}>Devices</button>
+          <span className="sl">/</span>
+          <button aria-current={view === 'profile'} onClick={() => setView('profile')}>Profile</button>
         </nav>
         <div className="spacer" />
         <span className="who">{demo ? 'Demo' : session?.user.email}</span>
@@ -167,7 +184,9 @@ export default function App() {
         </div>
       </header>
 
-      {view === 'devices' ? <DevicesPage token={session?.access_token ?? null} /> : (
+      {view === 'devices' ? <DevicesPage token={session?.access_token ?? null} />
+        : view === 'projects' ? demo ? <ProjectsPage /> : <LiveProjects key={session!.user.id} account={session!.user.id} token={session!.access_token} />
+        : view === 'profile' ? demo ? <ProfilePage who="" /> : <LiveProfile key={session!.user.id} who={session!.user.email ?? ''} account={session!.user.id} token={session!.access_token} /> : fx && (
       <main>
         {/* Only claim there is no activity once the counts have settled. While
             rollups are being recomputed the year total can read 0, which made this
