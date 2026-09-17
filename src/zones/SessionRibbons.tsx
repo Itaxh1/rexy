@@ -1,5 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
-import { SOURCES, fmtDur, fmtMs, type EventDetail } from '../data';
+import { SOURCES, fmtDur, fmtMs, type EventDetail, type Story } from '../data';
+import { isSetupText } from '../sessionTitle';
+import { toolLabel } from '../eventPresentation';
 import EventPreview from '../EventPreview';
 import {
   CLUSTER_PX, axisPosition, axisTicks, clusterByPixel, estimatedActiveMs,
@@ -24,10 +26,11 @@ const clusterClass = (c: Cluster) =>
 
 const timeOf = (ms: number) => new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 
-export default function SessionRibbons({ ribbon, onOpen, token = null }: {
+export default function SessionRibbons({ ribbon, onOpen, token = null, story = [] }: {
   ribbon: DayRibbon;
   onOpen?: (sessionId: string) => void;
   token?: string | null;
+  story?: Story[];
 }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [measured, setMeasured] = useState(0);
@@ -199,7 +202,7 @@ export default function SessionRibbons({ ribbon, onOpen, token = null }: {
         <span className="srb-legend-note">Taller = more events · each mark ≈ {minutesPerMark} min</span>
       </div>
 
-      {tip && <ClusterTip key={tip.cluster.key} tip={tip} token={token} cache={previews.current} />}
+      {tip && <ClusterTip key={tip.cluster.key} tip={tip} story={story} token={token} cache={previews.current} />}
     </div>
   );
 }
@@ -217,10 +220,10 @@ function eventTitle(e: RibbonEvent) {
   if (e.k === 'user') return 'You asked';
   if (e.k === 'agent') return 'Agent replied';
   const verdict = e.st === 'succeeded' ? 'worked' : e.st === 'unknown' ? 'result not recorded' : e.st;
-  return `${e.n ?? 'Action'} — ${verdict}`;
+  return `${toolLabel(e.n)} — ${verdict}`;
 }
 
-function ClusterTip({ tip, token, cache }: { tip: Tip; token: string | null; cache: Map<string, EventDetail> }) {
+function ClusterTip({ tip, token, cache, story }: { tip: Tip; token: string | null; cache: Map<string, EventDetail>; story: Story[] }) {
   const { cluster: c, session } = tip;
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ left: tip.x + 14, top: tip.y + 14 });
@@ -241,7 +244,9 @@ function ClusterTip({ tip, token, cache }: { tip: Tip; token: string | null; cac
   const tools = new Map<string, number>();
   for (const e of c.events) if (e.k === 'tool' && e.n) tools.set(e.n, (tools.get(e.n) ?? 0) + 1);
   const topTools = [...tools.entries()].sort((a, b) => b[1] - a[1]);
-  const previewEvents = single ? [single] : [c.events.find(e => e.k === 'user'), c.events.find(e => e.k === 'tool')]
+  const prompt = c.events.find(e => e.k === 'user' && story.some(row => row.s === e.s && row.t === e.t && row.k === 'user' && !isSetupText(row.x)))
+    ?? c.events.find(e => e.k === 'user');
+  const previewEvents = single ? [single] : [prompt, c.events.find(e => e.k === 'tool')]
     .filter((e): e is RibbonEvent => Boolean(e));
 
   return (
@@ -264,11 +269,12 @@ function ClusterTip({ tip, token, cache }: { tip: Tip; token: string | null; cac
         </div>
         <dl>
           {c.failed > 0 && <><dt>Failed</dt><dd className="srb-bad">{c.failed} ❌</dd></>}
-          {topTools.length > 0 && <><dt>Tools</dt><dd>{topTools.map(([n, k]) => `${n} ×${k}`).join(' · ')}</dd></>}
+          {topTools.length > 0 && <><dt>Tools</dt><dd>{topTools.map(([n, k]) => `${toolLabel(n)} ×${k}`).join(' · ')}</dd></>}
           <dt>Session</dt><dd>{session.title}</dd>
         </dl>
       </>}
-      {previewEvents.map(e => <EventPreview key={e.id} id={e.id} kind={e.k} token={token} cache={cache} />)}
+      {c.actions > 1 && <p className="srmeta">Previewing 1 of {c.actions} tool calls · open the session for all calls</p>}
+      {previewEvents.map(e => <EventPreview key={e.id} id={e.id} kind={e.k} toolName={e.n} token={token} cache={cache} />)}
       <div className="f">Click to open this session</div>
     </div>
   );

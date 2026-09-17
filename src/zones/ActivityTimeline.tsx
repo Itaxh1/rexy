@@ -16,7 +16,11 @@ export default function ActivityTimeline({ day, sessions, events, story, token, 
 }) {
   const [expanded, setExpanded] = useState(true);
   const detailId = useId();
-  const ribbon = useMemo(() => loadedRibbon ?? ribbonFromEvents(day, sessions, events), [loadedRibbon, day, sessions, events]);
+  const ribbon = useMemo(() => {
+    if (!loadedRibbon) return ribbonFromEvents(day, sessions, events);
+    const titles = new Map(sessions.map(s => [s.id, s.title]));
+    return { ...loadedRibbon, sessions: loadedRibbon.sessions.map(s => ({ ...s, title: titles.get(s.id) ?? s.title })) };
+  }, [loadedRibbon, day, sessions, events]);
 
   return <>
     <div className="sec-h">
@@ -24,7 +28,7 @@ export default function ActivityTimeline({ day, sessions, events, story, token, 
       <span className="n">every session on its own ribbon · hover a mark to inspect</span>
     </div>
     {loading && !ribbon.events.length ? <div className="panel"><div className="empty" role="status">Loading session ribbons…</div></div>
-      : <SessionRibbons ribbon={ribbon} onOpen={onOpen} token={token} />}
+      : <SessionRibbons ribbon={ribbon} story={story} onOpen={onOpen} token={token} />}
 
     <div className="sec-h timeline-expanded">
       <h2>What happened</h2>

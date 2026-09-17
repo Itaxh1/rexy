@@ -13,10 +13,12 @@ import { requestSummary } from './api';
 import { useActivity } from './useActivity';
 import { getSupabase } from './lib/supabase';
 import { applyTheme, readTheme, type Theme } from './theme';
-import { addDays, dayKey, fmtDay, yearDays } from './data';
+import { addDays, dayKey, fmtDay, yearDays, SOURCES } from './data';
+import { isSetupText, sessionTitle } from './sessionTitle';
 import { toolStats } from './activityStats';
 import EventPreview from './EventPreview';
 import type { EventDetail } from './data';
+import { toolLabel } from './eventPresentation';
 
 
 export default function App() {
@@ -84,9 +86,14 @@ export default function App() {
   );
 
   const daySessions = useMemo(
-    () => (fx ? fx.sessions.filter(s => s.d === day).sort((a, b) => a.start - b.start) : []),
-    [fx, day],
+    () => (fx ? fx.sessions.filter(s => s.d === day).map(s => ({ ...s, title: sessionTitle(s, dayStory) }))
+      .sort((a, b) => a.start - b.start) : []),
+    [fx, day, dayStory],
   );
+
+  const inactiveSources = useMemo(() => (demo || ribbon?.date === day && ribbon.snapshot_complete)
+    ? SOURCES.filter(source => !daySessions.some(s => s.src === source.id) && !dayEvents.some(e => e.src === source.id))
+      .map(source => source.id) : [], [demo, ribbon, day, daySessions, dayEvents]);
 
   const dayTools = useMemo(() => toolStats(dayEvents), [dayEvents]);
 
@@ -197,7 +204,7 @@ export default function App() {
         <div className={`daybody${dayLoading ? ' is-stale' : ''}`} aria-busy={dayLoading}>
         <section className="sec" id="sessions">
           <Stats events={dayEvents} sessions={daySessions} tools={dayTools} />
-        <TokenUsage usage={fx.tokens_by_source?.[day]} loading={extrasLoading} />
+        <TokenUsage usage={fx.tokens_by_source?.[day]} loading={extrasLoading || dayLoading} inactiveSources={inactiveSources} />
         {extrasAsOf && <p className="usage-note">Summaries and usage as of {new Date(extrasAsOf).toLocaleTimeString()}{extrasLoading ? ' · updating' : ''}</p>}
         </section>
 
@@ -270,13 +277,14 @@ function SessionInspector({ session, events, story, onClose, token }: {
           {ordered.slice(0, limit).map((item, index) => {
             const id = item.id ?? `demo-${index}`;
             const text = story.find(s => s.s === item.s && s.t === item.t && s.k === item.k)?.x;
+            const setup = item.k === 'user' && Boolean(text && isSetupText(text));
             return <li key={id}>
               <time>{new Date(item.t).toLocaleTimeString()}</time>
               <button className="link" aria-expanded={expandedEvent === id} onClick={() => setExpandedEvent(value => value === id ? null : id)}>
-                {item.k === 'user' ? 'Your prompt' : item.k === 'agent' ? 'Agent response' : `${item.n ?? 'Tool'} · ${item.st}`}
+                {setup ? 'Session setup' : item.k === 'user' ? 'Your prompt' : item.k === 'agent' ? 'Agent response' : `${toolLabel(item.n)} · ${item.st}`}
               </button>
-              {text && <p>{text}</p>}
-              {expandedEvent === id && <EventPreview id={id} kind={item.k} token={token} cache={previews.current} />}
+              {text && <p>{setup ? 'Workspace instructions or environment context.' : text}</p>}
+              {expandedEvent === id && <EventPreview id={id} kind={item.k} toolName={item.n} allowRaw token={token} cache={previews.current} />}
             </li>;
           })}
         </ol>

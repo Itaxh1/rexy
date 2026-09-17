@@ -7,6 +7,7 @@ import Ribbon from './Ribbon';
 import TokenUsage from './TokenUsage';
 import { loadEvent } from '../api';
 import type { Ev, Sess, Story } from '../data';
+import { ribbonFromEvents } from '../dayRibbon';
 
 vi.mock('../api', () => ({ loadEvent: vi.fn() }));
 const session: Sess = { id: 's', src: 'codex', title: 'Fix auth', proj: 'Rexy', model: null,
@@ -79,6 +80,28 @@ it('uses backend totals and does not invent zero usage for an unavailable source
   expect(rows[0].textContent).toContain('Claude CodeUsage unavailable');
   expect(rows[1].textContent).toContain('Codex60total tokens');
   expect(rows[1].textContent).toContain('thinking, included in output');
+});
+
+it('shows zero for a confirmed inactive agent, without zeroing unknown or loading usage', async () => {
+  await act(async () => root.render(<TokenUsage inactiveSources={['claude-code']} />));
+  let rows = container.querySelectorAll('.toks');
+  expect(rows[0].textContent).toBe('Claude Code0total tokens');
+  expect(rows[1].textContent).toBe('CodexUsage unavailable');
+  await act(async () => root.render(<TokenUsage inactiveSources={['claude-code']} loading />));
+  rows = container.querySelectorAll('.toks');
+  expect(rows[0].textContent).toBe('Claude CodeLoading usage…');
+  await act(async () => root.render(<TokenUsage inactiveSources={['claude-code']}
+    usage={{ 'claude-code': { in: 10, cr: 0, cw: 0, out: 20, th: 0, total: 30 } }} />));
+  expect(container.querySelector('.toks')?.textContent).toContain('Claude Code30total tokens');
+});
+
+it('uses the same resolved session name in live ribbons and the summary list', async () => {
+  const loaded = ribbonFromEvents(session.d, [{ ...session, title: '# AGENTS.md instructions <INSTRUCTIONS>' }], events);
+  await act(async () => root.render(<ActivityTimeline day={session.d} sessions={[session]} events={events}
+    story={story} ribbon={loaded} token={null} onOpen={vi.fn()} />));
+  expect(container.querySelector('.srb-title')?.textContent).toBe('Fix auth');
+  expect(container.querySelector('.timeline-summary-heading button')?.textContent).toBe('Fix auth');
+  expect(loaded.sessions[0].title).toContain('AGENTS.md');
 });
 
 it('positions hour labels at event boundaries and thins crowded labels without hiding events', async () => {

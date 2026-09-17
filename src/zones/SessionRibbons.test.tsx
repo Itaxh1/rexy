@@ -146,6 +146,28 @@ describe('<SessionRibbons>', () => {
       expect(container.querySelector('script')).toBeNull();
     } finally { vi.useRealTimers(); }
   });
+
+  it('previews the actual request before setup context and states that other tool calls exist', async () => {
+    const items = [ev('setup', 'cx-a', 11, 'user'), ev('request', 'cx-a', 11.001, 'user'),
+      ev('tool-one', 'cx-a', 11.002, 'tool', { n: 'exec' }), ev('tool-two', 'cx-a', 11.003, 'tool', { n: 'exec' })];
+    vi.useFakeTimers(); vi.mocked(loadEvent).mockClear();
+    vi.mocked(loadEvent).mockImplementation(async id => ({ id, content: id === 'request' ? 'Fix calendar loading' : null,
+      tool_input: id === 'tool-one' ? 'npm test' : null, tool_output: null, truncated: false }));
+    try {
+      await act(async () => root.render(<SessionRibbons token="browser" ribbon={{ ...ribbon, off_axis_event_ids: [],
+        sessions: [ribbon.sessions[0]!], events: items }} story={[
+          { ...items[0], k: 'user', x: '<environment_context>setup</environment_context>' },
+          { ...items[1], k: 'user', x: 'Fix calendar loading' },
+        ]} />));
+      await act(async () => container.querySelector<HTMLButtonElement>('.srb-mark')!.focus());
+      await act(async () => vi.advanceTimersByTimeAsync(120));
+      expect(vi.mocked(loadEvent).mock.calls.map(call => call[0])).toEqual(['request', 'tool-one']);
+      const tip = container.querySelector('[role=tooltip]')!;
+      expect(tip.textContent).toContain('Run script (exec) ×2');
+      expect(tip.textContent).toContain('Previewing 1 of 2 tool calls');
+      expect(tip.textContent).toContain('Fix calendar loading');
+    } finally { vi.useRealTimers(); }
+  });
 });
 
 describe('stub', () => {

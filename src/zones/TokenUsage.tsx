@@ -1,6 +1,8 @@
 import { SOURCES, fmtTok, type AgentTokens, type Src } from '../data';
 
-export default function TokenUsage({ usage, loading = false }: { usage?: Partial<Record<Src, AgentTokens>>; loading?: boolean }) {
+export default function TokenUsage({ usage, loading = false, inactiveSources = [] }: {
+  usage?: Partial<Record<Src, AgentTokens>>; loading?: boolean; inactiveSources?: Src[];
+}) {
   return <div className="panel token-usage" aria-label="Tokens used by agent on the selected date">
     {SOURCES.map(source => {
       const tokens = usage?.[source.id];
@@ -13,7 +15,9 @@ export default function TokenUsage({ usage, loading = false }: { usage?: Partial
           {tokens.cw > 0 && <span title={tokens.cw.toLocaleString()}><b>{fmtTok(tokens.cw)}</b>cache writes</span>}
           <span title={tokens.out.toLocaleString()}><b>{fmtTok(tokens.out)}</b>output</span>
           {tokens.th > 0 && <span title={tokens.th.toLocaleString()}><b>{fmtTok(tokens.th)}</b>thinking, included in output</span>}
-        </> : <span>{loading ? 'Loading usage…' : 'Usage unavailable'}</span>}
+        </> : !loading && inactiveSources.includes(source.id)
+          ? <span title="No sessions recorded for this agent on this date"><b>0</b>total tokens</span>
+          : <span>{loading ? 'Loading usage…' : 'Usage unavailable'}</span>}
       </div>;
     })}
     <p className="usage-note">Recorded usage for this date; counts fill in as history imports. Cache and thinking are not counted twice.</p>
