@@ -19,6 +19,24 @@ It is cleared when the account/year changes. IndexedDB persistence, cross-tab
 purge barriers, non-blocking cached startup and prefetch remain separate work;
 this release does not promise instantaneous refreshes or uncached days.
 
+## Profile and Projects
+
+`?view=profile` and `?view=projects` use real authenticated backend snapshots;
+only `?demo=1` uses synthetic examples. These two pages have a separate
+account-scoped IndexedDB cache with a 24-hour TTL, cross-tab deletion/logout
+barriers and background refresh. They skip the global backend readiness gate
+so saved content can remain visible while Render is unavailable. This does
+not add persisted caching to the Activity page described above.
+
+Profile displays recorded counts and marks unsupported metrics as untracked.
+Projects lists recorded folder-label groups. Generate/Regenerate explicitly
+queue Grok; opening or refreshing a page never generates files. Saved
+PROJECT.md and SKILL.md support Preview, Source, Copy and Download. Source
+coverage is shown; review generated advice against the current repository.
+
+Private transcript-derived design fixtures are retained only in the ignored
+`.local-fixtures/` directory; they are not shipped in the public demo build.
+
 The ribbon retains unknown durations as unknown, displays failures/interruption
 markers from recorded status, and exposes off-axis events through session inspection.
 Activity time is an estimate formed by unioning short within-session intervals.
