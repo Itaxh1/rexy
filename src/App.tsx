@@ -75,10 +75,10 @@ export default function App() {
   const days = useMemo(() => yearDays(year), [year]);
   const dayEvents = useMemo(() => (fx ? fx.events.filter(e => e.d === day) : []), [fx, day]);
   useEffect(() => {
-    if (!fx || day.startsWith(String(year))) return;
+    if (!fx || !calendarReady || day.startsWith(String(year))) return;
     const inYear = Object.keys(fx.rollups).filter(d => d.startsWith(String(year))).sort();
     setDay(inYear.length ? inYear[inYear.length - 1] : `${year}-01-01`);
-  }, [year, fx, day]);
+  }, [year, fx, day, calendarReady]);
 
   const dayStory = useMemo(
     () => (fx ? fx.story.filter(s => s.d === day) : []),

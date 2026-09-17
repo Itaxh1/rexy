@@ -11,7 +11,8 @@ const shorten = (text: string) => text.length <= 96 ? text : text.slice(0, 95).r
 
 /** Display-only; no model calls, source rewrites, or waiting for additional reads. */
 export function sessionTitle(session: Sess, story: Story[] = []): string {
-  const saved = meaningful(session.title) ?? meaningful(session.summary);
+  // A TLDR describes an outcome, not the conversation's stable task name.
+  const saved = meaningful(session.title);
   if (saved) return shorten(saved);
   const prompt = story.filter(row => row.s === session.id && row.k === 'user' && meaningful(row.x))
     .sort((a, b) => a.t - b.t)[0];

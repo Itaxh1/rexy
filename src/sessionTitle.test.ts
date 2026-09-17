@@ -11,9 +11,9 @@ it('keeps a meaningful source title, including requests to edit instruction file
   expect(sessionTitle({ ...session, title: 'Update AGENTS.md instructions for tests' })).toBe('Update AGENTS.md instructions for tests');
 });
 
-it('replaces injected titles with an existing TLDR without an extra model call', () => {
+it('does not turn the latest outcome into a session title', () => {
   expect(sessionTitle({ ...session, summary: 'Fixed dashboard loading and session ribbons.' }))
-    .toBe('Fixed dashboard loading and session ribbons.');
+    .toBe('interface.ai session');
 });
 
 it('uses the earliest meaningful user request from this session, skipping setup and acknowledgements', () => {
