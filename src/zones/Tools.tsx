@@ -8,7 +8,7 @@ export default function Tools({ tools }: { tools: Tool[] }) {
     return <div className="panel"><div className="empty">No actions with a known result on this day.</div></div>;
   }
   const top = Math.max(...tools.map(t => t.count));
-  const scale = Math.max(...tools.map(t => t.max)) || 1;
+  const scale = Math.max(...tools.map(t => t.max ?? 0)) || 1;
 
   return (
     <div className="panel">
@@ -20,7 +20,7 @@ export default function Tools({ tools }: { tools: Tool[] }) {
               <i style={{ width: `${(t.ok / top) * 100}%`, background: 'var(--tool)' }} />
               {t.fail > 0 && <i style={{ width: `${Math.max(3, (t.fail / top) * 100)}%`, background: 'var(--crit)' }} />}
             </div>
-            {t.max > 0 && (
+            {t.max !== null && t.p50 !== null && t.p90 !== null && (
               <>
                 <div className="lat">
                   <span className="tr" />
@@ -36,7 +36,8 @@ export default function Tools({ tools }: { tools: Tool[] }) {
           </div>
           <div className="tnum">
             {t.count}
-            <small>{t.fail ? `${t.fail} failed` : 'all worked'}</small>
+            <small>{t.ok} succeeded · {t.fail} failed{t.count > t.ok + t.fail ? ` · ${t.count - t.ok - t.fail} other/unknown` : ''}</small>
+            {t.max === null && <small>Duration not recorded</small>}
           </div>
         </div>
       ))}

@@ -1,4 +1,5 @@
 import { fmtDur, isFailed, type Ev, type Sess, type Tool } from '../data';
+import { activeTime } from '../activityStats';
 
 /** Plain-language day summary. Deterministic — nothing here waits on a model. */
 export default function Stats({
@@ -8,21 +9,16 @@ export default function Stats({
   const failed = toolEvents.filter(e => isFailed(e.st)).length;
   const prompts = events.filter(e => e.k === 'user').length;
 
-  // Gaps over five minutes count as idle, or a session left open overnight
-  // reads as fourteen hours of work.
-  let active = 0;
-  for (let i = 1; i < events.length; i++) {
-    const gap = events[i].t - events[i - 1].t;
-    if (gap > 0 && gap < 300_000) active += gap;
-  }
-  const slowest = tools.length ? tools.reduce((a, b) => (a.max > b.max ? a : b)) : null;
+  const active = activeTime(events);
+  const measured = tools.filter((tool): tool is Tool & { max: number } => tool.max !== null);
+  const slowest = measured.length ? measured.reduce((a, b) => (a.max > b.max ? a : b)) : null;
 
   const items: [string, string, string?][] = [
     [String(sessions.length), sessions.length === 1 ? 'session' : 'sessions'],
     [String(prompts), 'things you asked for'],
     [String(toolEvents.length), 'actions taken'],
     [failed ? String(failed) : 'None', failed ? (failed === 1 ? 'action failed' : 'actions failed') : 'failed'],
-    [active ? fmtDur(active) : '—', 'spent working'],
+    [active !== null ? '≈ ' + fmtDur(active) : '—', 'active time (estimate)'],
   ];
 
   return (

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import Auth from './auth/Auth';
 import Connect from './Connect';
@@ -13,7 +13,10 @@ import { requestSummary } from './api';
 import { useActivity } from './useActivity';
 import { getSupabase } from './lib/supabase';
 import { applyTheme, readTheme, type Theme } from './theme';
-import { addDays, dayKey, fmtDay, isFailed, isSucceeded, yearDays, type Tool } from './data';
+import { addDays, dayKey, fmtDay, yearDays } from './data';
+import { toolStats } from './activityStats';
+import EventPreview from './EventPreview';
+import type { EventDetail } from './data';
 
 
 export default function App() {
@@ -28,7 +31,8 @@ export default function App() {
   const [day, setDay] = useState('');
   const [refresh, setRefresh] = useState(0);
   const [showConnect, setShowConnect] = useState<boolean | null>(null);
-  const { fx, setFx, error, dayLoading, rollupsPending } = useActivity({ demo, token: session?.access_token ?? null, accountId: session?.user.id, year, day, setDay, refresh });
+  const { fx, setFx, ribbon, error, dayLoading, extrasLoading, extrasAsOf, storyLoading, storyMore,
+    storyNewer, loadMoreStory, reloadStory, rollupsPending, calendarReady } = useActivity({ demo, token: session?.access_token ?? null, accountId: session?.user.id, year, day, setDay, refresh });
   const err = authError || error;
   const [openSession, setOpenSession] = useState<string | null>(null);
   const [view, setView] = useState<'activity' | 'devices'>('activity');
@@ -63,8 +67,8 @@ export default function App() {
 
   useEffect(() => { setShowConnect(null); }, [session?.user.id]);
   useEffect(() => {
-    if (fx) setShowConnect(current => current ?? (!demo && !rollupsPending && fx.stats.strokes === 0));
-  }, [demo, fx, rollupsPending]);
+    if (fx && calendarReady) setShowConnect(current => current ?? (!demo && !rollupsPending && fx.stats.strokes === 0));
+  }, [demo, fx, rollupsPending, calendarReady]);
 
   const days = useMemo(() => yearDays(year), [year]);
   const dayEvents = useMemo(() => (fx ? fx.events.filter(e => e.d === day) : []), [fx, day]);
@@ -84,27 +88,7 @@ export default function App() {
     [fx, day],
   );
 
-  const dayTools = useMemo<Tool[]>(() => {
-    const m = new Map<string, { d: number[]; count: number; ok: number; fail: number }>();
-    for (const e of dayEvents) {
-      if (e.k !== 'tool' || !e.n) continue;
-      const g = m.get(e.n) ?? { d: [], count: 0, ok: 0, fail: 0 };
-      g.count++;
-      if (e.ms != null) g.d.push(e.ms);
-      if (isFailed(e.st)) g.fail++;
-      if (isSucceeded(e.st)) g.ok++;
-      m.set(e.n, g);
-    }
-    return [...m.entries()].map(([name, g]) => {
-      const s = g.d.sort((a, b) => a - b);
-      return {
-        name, count: g.count, ok: g.ok, fail: g.fail,
-        p50: s.length ? s[s.length >> 1] : 0,
-        p90: s.length ? s[Math.min(s.length - 1, Math.floor(s.length * 0.9))] : 0,
-        max: s.length ? s[s.length - 1] : 0,
-      };
-    }).sort((a, b) => b.count - a.count);
-  }, [dayEvents]);
+  const dayTools = useMemo(() => toolStats(dayEvents), [dayEvents]);
 
   const logout = async () => {
     if (!demo) await (await getSupabase()).auth.signOut();
@@ -213,12 +197,16 @@ export default function App() {
         <div className={`daybody${dayLoading ? ' is-stale' : ''}`} aria-busy={dayLoading}>
         <section className="sec" id="sessions">
           <Stats events={dayEvents} sessions={daySessions} tools={dayTools} />
-          <TokenUsage usage={fx.tokens_by_source?.[day]} />
+        <TokenUsage usage={fx.tokens_by_source?.[day]} loading={extrasLoading} />
+        {extrasAsOf && <p className="usage-note">Summaries and usage as of {new Date(extrasAsOf).toLocaleTimeString()}{extrasLoading ? ' · updating' : ''}</p>}
         </section>
 
         <section className="sec">
-          <ActivityTimeline key={`${session?.user.id ?? 'demo'}:${day}`} day={day}
+          <ActivityTimeline key={`${session?.user.id ?? 'demo'}:${day}:${ribbon?.purge_revision ?? ''}`} day={day}
             events={dayEvents} sessions={daySessions} story={dayStory}
+            ribbon={ribbon?.date === day ? ribbon : null} loading={dayLoading}
+            storyLoading={storyLoading} storyMore={storyMore} storyNewer={storyNewer}
+            onMoreStory={loadMoreStory} onReloadStory={reloadStory}
             token={session?.access_token ?? null} onOpen={setOpenSession} />
         </section>
 
@@ -242,6 +230,8 @@ export default function App() {
       )}
       {openSession && (
         <SessionInspector
+          key={`${session?.user.id ?? 'demo'}:${day}:${openSession}:${ribbon?.purge_revision ?? ''}`}
+          token={session?.access_token ?? null}
           session={daySessions.find(item => item.id === openSession)}
           events={dayEvents.filter(item => item.s === openSession)}
           story={dayStory.filter(item => item.s === openSession)}
@@ -252,12 +242,22 @@ export default function App() {
   );
 }
 
-function SessionInspector({ session, events, story, onClose }: {
+function SessionInspector({ session, events, story, onClose, token }: {
   session: import('./data').Sess | undefined;
   events: import('./data').Ev[];
   story: import('./data').Story[];
   onClose: () => void;
+  token: string | null;
 }) {
+  const [limit, setLimit] = useState(100);
+  const [expandedEvent, setExpandedEvent] = useState<string | null>(null);
+  const previews = useRef(new Map<string, EventDetail>());
+  const ordered = useMemo(() => [...events].sort((a, b) => a.t - b.t), [events]);
+  useEffect(() => {
+    const escape = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', escape);
+    return () => document.removeEventListener('keydown', escape);
+  }, [onClose]);
   if (!session) return null;
   return (
     <div className="modal-backdrop" role="presentation" onMouseDown={onClose}>
@@ -267,14 +267,20 @@ function SessionInspector({ session, events, story, onClose }: {
         <p className="srmeta">{session.src} / {session.proj} / {events.length} events</p>
         {session.summary && <p className="modal-summary">{session.summary}</p>}
         <ol className="modal-story">
-          {story.map((item, index) => (
-            <li key={`${item.t}-${index}`}>
+          {ordered.slice(0, limit).map((item, index) => {
+            const id = item.id ?? `demo-${index}`;
+            const text = story.find(s => s.s === item.s && s.t === item.t && s.k === item.k)?.x;
+            return <li key={id}>
               <time>{new Date(item.t).toLocaleTimeString()}</time>
-              <b>{item.k === 'user' ? 'You' : 'Agent'}</b>
-              <p>{item.x}</p>
-            </li>
-          ))}
+              <button className="link" aria-expanded={expandedEvent === id} onClick={() => setExpandedEvent(value => value === id ? null : id)}>
+                {item.k === 'user' ? 'Your prompt' : item.k === 'agent' ? 'Agent response' : `${item.n ?? 'Tool'} · ${item.st}`}
+              </button>
+              {text && <p>{text}</p>}
+              {expandedEvent === id && <EventPreview id={id} kind={item.k} token={token} cache={previews.current} />}
+            </li>;
+          })}
         </ol>
+        {limit < ordered.length && <button className="link" onClick={() => setLimit(value => value + 100)}>Load more events ({ordered.length - limit} remaining)</button>}
       </section>
     </div>
   );

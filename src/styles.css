@@ -474,3 +474,82 @@ main{max-width:1260px;margin:0 auto;padding:20px 16px 80px}
 /* The waiting notice sits in the normal flow, so give the region a floor: it
    fades in without displacing the calendar beneath it. */
 .connection-status{margin-bottom:14px}
+
+/* ---------- session ribbons: one row per session on a local-day axis ---------- */
+/* Label column is shared by the axis, agent headers and rows, so every track has
+   the same width and the same pixel clustering. Colour is reserved for exceptions:
+   violet caps are your prompts, red is failure. Volume stays neutral and shows as
+   height. Agent hue appears only as a faint span under its own sessions. */
+.srb{padding:2px 0 0}
+.srb-grid{display:grid;grid-template-columns:240px minmax(0,1fr);column-gap:20px;padding:0 20px}
+.srb-axis{height:36px;align-items:end;border-bottom:1px solid var(--border)}
+.srb-zone{padding-bottom:9px;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.srb-track{position:relative;min-width:0}
+.srb-ticks{height:36px}
+.srb-tick{position:absolute;bottom:9px;transform:translateX(-50%);font-size:10px;font-weight:600;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--ink-3);white-space:nowrap;font-variant-numeric:tabular-nums}
+.srb-tick.start{transform:none}
+.srb-tick.end{transform:translateX(-100%)}
+.srb-now-label{bottom:22px;font-weight:700;color:var(--ink)}
+
+.srb-agent+.srb-agent{border-top:1px solid var(--border)}
+.srb-agent-head{width:100%;min-height:44px;align-items:center;background:none;border:0;cursor:pointer;
+  text-align:left;color:var(--ink);font:inherit}
+.srb-agent-head:disabled{cursor:default}
+.srb-agent-head:not(:disabled):hover{background:var(--surface-2)}
+.srb-agent-head:focus-visible{outline:2px solid var(--sel-bg);outline-offset:-2px}
+.srb-agent-name{display:flex;align-items:center;gap:9px;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.srb-agent-name .chip{width:8px;height:8px;border-radius:2px}
+.srb-agent-sum{display:flex;align-items:center;gap:6px;color:var(--ink-3);font-size:12px;font-variant-numeric:tabular-nums}
+.srb-agent-sum b{font-weight:600}
+.srb-caret{margin-left:auto;color:var(--ink-3);transition:transform .15s ease}
+.srb-agent-head[aria-expanded="false"] .srb-caret{transform:rotate(-90deg)}
+
+.srb-row{align-items:center;min-height:54px;border-top:1px solid color-mix(in srgb,var(--border) 65%,transparent)}
+.srb-row:hover{background:color-mix(in srgb,var(--surface-2) 60%,transparent)}
+.srb-label{min-width:0;padding:9px 0}
+.srb-title{font-size:13px;font-weight:560;letter-spacing:-.005em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.srb-meta{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;margin-top:3px;font-size:11px;color:var(--ink-3);
+  font-variant-numeric:tabular-nums}
+.srb-proj{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+.srb-num::before{content:"·";margin-right:8px;opacity:.55}
+.srb-bad{color:var(--crit)}
+.srb-cont{font-style:italic}
+.srb-muted{color:var(--ink-3)}
+
+.srb-row .srb-track{height:46px}
+.srb-line{position:absolute;top:0;bottom:0;width:1px;background:var(--border);opacity:.6}
+.srb-now{position:absolute;top:0;bottom:0;z-index:1;width:2px;margin-left:-1px;border-radius:1px;background:var(--sel-bg)}
+.srb-span{position:absolute;bottom:0;height:26px;border-radius:5px;
+  background:color-mix(in srgb,var(--srb-hue) 9%,transparent);
+  box-shadow:inset 0 -2px 0 color-mix(in srgb,var(--srb-hue) 62%,transparent)}
+.srb-span.from-before{border-top-left-radius:0;border-bottom-left-radius:0}
+.srb-span.into-after{border-top-right-radius:0;border-bottom-right-radius:0}
+.srb-mark{position:absolute;bottom:2px;z-index:2;padding:0;border:0;border-radius:2px 2px 1px 1px;background:var(--tool);cursor:pointer}
+.srb-mark.agent{background:var(--agent)}
+.srb-mark.failed{background:var(--crit)}
+.srb-mark.running{background:var(--warn)}
+.srb-mark:hover,.srb-mark:focus-visible{z-index:3;outline:2px solid var(--ink);outline-offset:1px}
+.srb-prompt{position:absolute;top:-5px;left:50%;width:5px;height:3px;margin-left:-2.5px;border-radius:2px;background:var(--user)}
+.srb-flag{position:absolute;top:-19px;left:50%;transform:translateX(-50%);font-size:9px;line-height:1;pointer-events:none}
+
+.srb-legend{display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px;padding:12px 20px 14px;
+  border-top:1px solid var(--border);color:var(--ink-3);font-size:11.5px}
+.srb-key{display:inline-block;width:5px;height:12px;margin-right:7px;vertical-align:-2px;border-radius:2px 2px 1px 1px;background:var(--tool)}
+.srb-key.agent{background:var(--agent)}
+.srb-key.failed{background:var(--crit)}
+.srb-key.prompt{width:7px;height:3px;vertical-align:3px;background:var(--user)}
+.srb-legend-note{margin-left:auto}
+
+.srb-tip{min-width:230px;max-width:min(420px,calc(100vw - 16px));max-height:calc(100vh - 16px);overflow:auto}
+.srb-tip-count{display:flex;flex-direction:column;gap:2px;margin:0 0 8px;font-size:12px}
+.srb-tip-count b{font-size:15px;font-weight:650;font-variant-numeric:tabular-nums}
+.srb-tip-mix{color:var(--ink-3)}
+
+@media (max-width:760px){
+  .srb-grid{grid-template-columns:minmax(0,1fr);column-gap:0}
+  .srb-axis .srb-zone{display:none}
+  .srb-label{padding:8px 0 2px}
+  .srb-legend-note{margin-left:0}
+}
+@media (prefers-reduced-motion:reduce){.srb-caret{transition:none}}

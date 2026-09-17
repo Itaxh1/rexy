@@ -1,4 +1,5 @@
 import type { EventDetail, Fixture } from './data';
+import type { DayRibbon } from './dayRibbon';
 import { API_BASE } from './lib/supabase';
 
 async function request<T>(path: string, token: string, init?: RequestInit): Promise<T> {
@@ -12,10 +13,53 @@ async function request<T>(path: string, token: string, init?: RequestInit): Prom
   });
   if (!response.ok) {
     const body = await response.json().catch(() => null) as { detail?: string } | null;
-    throw new Error(body?.detail || `API request failed (${response.status})`);
+    throw new ApiError(body?.detail || `API request failed (${response.status})`, response.status);
   }
   if (response.status === 204) return undefined as T;
   return response.json() as Promise<T>;
+}
+
+export class ApiError extends Error {
+  constructor(message: string, public status: number) { super(message); }
+}
+
+export type DayRevisions = { ribbon: string; extras: string; story: string; purge: string };
+export type RibbonData = DayRibbon & {
+  contract_version: 1; generated: string; revision: string; purge_revision: string;
+  snapshot_complete: boolean; markers_state: 'unsupported' | 'partial' | 'ready';
+};
+export type ExtrasData = {
+  contract_version: 1; date: string; generated: string; revision: string;
+  ribbon_revision: string; purge_revision: string;
+  sections: { summaries: 'ready' | 'failed'; tokens: 'ready' | 'failed'; findings: 'ready' | 'failed' | 'unsupported' };
+  summaries_by_session: Record<string, {
+    summary: string | null; summary_state: 'ready' | 'pending' | 'failed' | 'not_requested';
+    refresh_state: 'idle' | 'pending' | 'failed'; is_stale: boolean;
+    generated_at: string | null; input_revision: string | null; model: string | null;
+  }>;
+  tokens: Fixture['tokens']; tokens_by_source: NonNullable<Fixture['tokens_by_source']>;
+  usage_only_session_count: number | null;
+};
+export type StoryData = {
+  contract_version: 1; date: string; generated: string; revision: string;
+  series_revision: string; purge_revision: string; has_newer_data: boolean;
+  story: (Fixture['story'][number] & { id: string; truncated: boolean })[];
+  next_cursor: string | null;
+};
+
+export function loadRibbon(date: string, token: string, signal?: AbortSignal) {
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  return request<RibbonData>(`/v1/day/ribbon?${new URLSearchParams({ date, tz })}`, token, { signal, cache: 'no-store' });
+}
+
+export function loadExtras(date: string, token: string, signal?: AbortSignal) {
+  return request<ExtrasData>(`/v1/day/extras?${new URLSearchParams({ date })}`, token, { signal, cache: 'no-store' });
+}
+
+export function loadStory(date: string, token: string, signal?: AbortSignal, cursor?: string) {
+  const params = new URLSearchParams({ date, limit: '200' });
+  if (cursor) params.set('cursor', cursor);
+  return request<StoryData>(`/v1/day/story?${params}`, token, { signal, cache: 'no-store' });
 }
 
 export function loadDashboard(year: number, token: string, day?: string, signal?: AbortSignal) {
@@ -26,6 +70,7 @@ export function loadDashboard(year: number, token: string, day?: string, signal?
 
 export type CalendarData = Pick<Fixture, 'generated' | 'rollups'> & {
   revision: number; rollups_pending: boolean; refresh_after_ms: number;
+  day_revisions: Record<string, DayRevisions>;
 };
 export type DayData = Pick<Fixture, 'sessions' | 'events' | 'story' | 'tools' | 'tokens' | 'tokens_by_source'>;
 

@@ -2,13 +2,14 @@ export type Src = 'claude-code' | 'codex';
 export type Kind = 'user' | 'agent' | 'tool';
 export type St = 'unknown' | 'running' | 'succeeded' | 'failed' | 'interrupted' | 'canceled' | 'ok' | 'fail' | 'run';
 
-export interface Ev { t:number; d:string; src:Src; s:string; k:Kind; st:St; n?:string; ms?:number; id?:string }
+export interface Ev { t:number; d:string; src:Src; s:string; k:Kind; st:St; n?:string|null; ms?:number|null; id?:string }
 export interface Sess {
   id:string; src:Src; title:string; proj:string; model:string|null;
   start:number; end:number; d:string; summary?:string|null;
   summary_state?:'ready'|'pending'|'not_requested'|'failed';
+  refresh_state?:'idle'|'pending'|'failed'; is_stale?:boolean;
 }
-export interface Tool { name:string; count:number; ok:number; fail:number; p50:number; p90:number; max:number }
+export interface Tool { name:string; count:number; ok:number; fail:number; p50:number|null; p90:number|null; max:number|null }
 export interface Roll { sessions:number; events:number; tools:number; ok:number; fail:number }
 export interface Tk { in:number; out:number; cr:number; cw:number; th:number }
 export interface AgentTokens extends Tk { total:number }

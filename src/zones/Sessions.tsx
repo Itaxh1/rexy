@@ -41,8 +41,8 @@ export default function Sessions({
               </h3>
 
               <p className="srsum">
-                {state === 'ready' && (s.summary || 'Summary unavailable.')}
-                {state === 'pending' && <span className="pend">Summarising…</span>}
+                {s.summary || (state === 'ready' ? 'Summary unavailable.' : null)}
+                {(state === 'pending' || s.refresh_state === 'pending') && <span className="pend">{s.summary ? ' Updating saved TLDR…' : 'Summarising…'}</span>}
                 {state === 'failed' && <span className="pend">Summary failed. You can retry.</span>}
                 {state === 'not_requested' && (
                   <button className="ghost" onClick={e => {

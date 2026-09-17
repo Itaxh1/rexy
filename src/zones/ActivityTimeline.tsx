@@ -1,24 +1,30 @@
-import { useId, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { SOURCES, type Ev, type Sess, type Story } from '../data';
-import Ribbon from './Ribbon';
+import SessionRibbons from './SessionRibbons';
+import { ribbonFromEvents, type DayRibbon } from '../dayRibbon';
 import Timeline from './Timeline';
 
 /** Ribbon first — it is the shape of the day and reads at a glance. The written
  *  detail (TLDR, prompts, tool calls, corrections) sits underneath it, and only
  *  the per-exchange list is collapsible. */
-export default function ActivityTimeline({ day, sessions, events, story, token, onOpen }: {
+export default function ActivityTimeline({ day, sessions, events, story, token, onOpen, ribbon: loadedRibbon,
+  loading = false, storyLoading = false, storyMore = false, storyNewer = false, onMoreStory, onReloadStory }: {
   day: string; sessions: Sess[]; events: Ev[]; story: Story[];
   token: string | null; onOpen: (id: string) => void;
+  ribbon?: DayRibbon | null; loading?: boolean; storyLoading?: boolean; storyMore?: boolean; storyNewer?: boolean;
+  onMoreStory?: () => void; onReloadStory?: () => void;
 }) {
   const [expanded, setExpanded] = useState(true);
   const detailId = useId();
+  const ribbon = useMemo(() => loadedRibbon ?? ribbonFromEvents(day, sessions, events), [loadedRibbon, day, sessions, events]);
 
   return <>
     <div className="sec-h">
       <h2>When it happened</h2>
-      <span className="n">one mark per event · hover to inspect</span>
+      <span className="n">every session on its own ribbon · hover a mark to inspect</span>
     </div>
-    <Ribbon day={day} events={events} sessions={sessions} story={story} token={token} onOpen={onOpen} />
+    {loading && !ribbon.events.length ? <div className="panel"><div className="empty" role="status">Loading session ribbons…</div></div>
+      : <SessionRibbons ribbon={ribbon} onOpen={onOpen} token={token} />}
 
     <div className="sec-h timeline-expanded">
       <h2>What happened</h2>
@@ -39,14 +45,17 @@ export default function ActivityTimeline({ day, sessions, events, story, token, 
           <p>{session.summary || (session.summary_state === 'pending' ? 'TLDR is being prepared…'
             : session.summary_state === 'failed' ? 'TLDR unavailable. Retry from Sessions below.'
             : `${events.filter(event => event.s === session.id && event.k === 'tool').length} tool calls recorded. TLDR not generated yet.`)}</p>
-          {session.summary && session.summary_state === 'pending' && <span className="srmeta">Updating TLDR…</span>}
+          {session.summary && (session.refresh_state === 'pending' || session.summary_state === 'pending' || session.is_stale) && <span className="srmeta">Saved TLDR · updating when new work is summarized</span>}
         </li>)}
       </ul> : <div className="empty">Nothing happened on this day.</div>}
     </div>
 
-    <div id={detailId} hidden={!expanded}>
+    <div id={detailId} hidden={!expanded} aria-busy={storyLoading}>
       {expanded && <div className="timeline-expanded">
-        <Timeline story={story} events={events} onOpen={onOpen} />
+        {storyLoading && !story.length ? <div className="panel"><div className="empty">Loading exchanges…</div></div>
+          : <Timeline story={story} events={events} onOpen={onOpen} />}
+        {storyMore && <button className="link" disabled={storyLoading} onClick={onMoreStory}>{storyLoading ? 'Loading…' : 'Load more exchanges'}</button>}
+        {storyNewer && <button className="link" disabled={storyLoading} onClick={onReloadStory}>More exchanges available · refresh</button>}
       </div>}
     </div>
   </>;

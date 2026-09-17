@@ -4,6 +4,27 @@ Rexy is the authenticated React dashboard for Claude Code and Codex activity
 collected by Linus. It shows annual activity, a selected-day event ribbon,
 session TLDRs, token totals, tool outcomes, and deterministic intervention flags.
 
+## Split day loading
+
+The production dashboard uses `/v1/day/ribbon` for real per-session rows on the
+local-midnight axis, `/v1/day/extras` for saved TLDRs and token usage, and paginated
+`/v1/day/story` for exchanges. These requests paint independently. Prompt/tool
+previews use `/v1/events/{id}` only after focus/hover or explicit expansion.
+The synthetic session-ribbon generator is test-only and is not imported into the
+production application. Explicit demo mode still uses the bundled synthetic fixture.
+
+The bounded **memory-only** cache uses per-day/per-tier revisions, preserves saved
+TLDRs while refresh is pending, and rejects observed pre-delete purge tokens.
+It is cleared when the account/year changes. IndexedDB persistence, cross-tab
+purge barriers, non-blocking cached startup and prefetch remain separate work;
+this release does not promise instantaneous refreshes or uncached days.
+
+The ribbon retains unknown durations as unknown, displays failures/interruption
+markers from recorded status, and exposes off-axis events through session inspection.
+Activity time is an estimate formed by unioning short within-session intervals.
+Tool percentiles use linear interpolation. Automated semantic/slop findings remain
+unsupported in the backend; existing text-based correction hints are labelled inferred.
+
 ## Development
 
 ```sh

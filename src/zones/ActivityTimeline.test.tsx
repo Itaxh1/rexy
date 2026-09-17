@@ -3,6 +3,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import ActivityTimeline from './ActivityTimeline';
+import Ribbon from './Ribbon';
 import TokenUsage from './TokenUsage';
 import { loadEvent } from '../api';
 import type { Ev, Sess, Story } from '../data';
@@ -24,19 +25,27 @@ beforeEach(() => {
 afterEach(async () => { await act(async () => root.unmount()); container.remove(); vi.useRealTimers(); });
 const renderTimeline = () => act(async () => root.render(<ActivityTimeline day={session.d}
   sessions={[session]} events={events} story={story} token="browser" onOpen={vi.fn()} />));
+// Keep the legacy ribbon checks while production uses per-session ribbons.
+const renderRibbon = (evs: Ev[] = events, st: Story[] = story, token: string | null = 'browser') =>
+  act(async () => root.render(<Ribbon day={session.d} sessions={[session]} events={evs} story={st} token={token} onOpen={vi.fn()} />));
 
-it('keeps the ribbon visible and collapses only the exchanges', async () => {
+it('keeps the session ribbons visible and collapses only the exchanges', async () => {
   await renderTimeline();
+  const rows = () => container.querySelectorAll('.srb-row').length;
   expect(container.textContent).toContain(session.summary);
-  expect(container.querySelectorAll('.sb')).toHaveLength(2);
+  expect(rows()).toBeGreaterThan(0);
+  expect(container.querySelectorAll('.srb-title')).toHaveLength(1);
+  expect(container.querySelector('.srb-title')?.textContent).toBe(session.title);
+  expect(container.textContent).not.toContain('Sample data');
   expect(container.querySelectorAll('.ti')).toHaveLength(1);
   expect(loadEvent).not.toHaveBeenCalled();
-  const toggle = container.querySelector<HTMLButtonElement>('[aria-expanded]')!;
+  const toggle = container.querySelector<HTMLButtonElement>('.timeline-toggle')!;
   expect(toggle.getAttribute('aria-expanded')).toBe('true');
+  const before = rows();
   await act(async () => toggle.click());
-  // The ribbon now sits above the collapsible region, so it survives the toggle;
+  // Ribbons sit above the collapsible region, so they survive the toggle;
   // only the per-exchange list is hidden.
-  expect(container.querySelectorAll('.sb')).toHaveLength(2);
+  expect(rows()).toBe(before);
   expect(container.querySelectorAll('.ti')).toHaveLength(0);
   expect(toggle.getAttribute('aria-expanded')).toBe('false');
   expect(container.textContent).toContain(session.summary);
@@ -47,7 +56,7 @@ it('keeps the ribbon visible and collapses only the exchanges', async () => {
 it('shows the actual prompt safely and lazily loads tool input/output on focus', async () => {
   vi.mocked(loadEvent).mockImplementation(async id => ({ id, content: null,
     tool_input: id === '2' ? 'npm test' : null, tool_output: id === '2' ? '42 passed' : null, truncated: false }));
-  await renderTimeline();
+  await renderRibbon();
   const buttons = container.querySelectorAll<HTMLButtonElement>('.sb');
   await act(async () => buttons[0].focus());
   expect(container.querySelector('[role=tooltip]')?.textContent).toContain(story[0].x);
@@ -76,8 +85,7 @@ it('positions hour labels at event boundaries and thins crowded labels without h
   const hours = [8, 8, 9, 9, 9, 10];
   const timed = hours.map((hour, index) => ({ ...events[0], id: String(index),
     t: new Date(2026, 8, 4, hour, index).getTime() }));
-  await act(async () => root.render(<ActivityTimeline day={session.d} sessions={[session]}
-    events={timed} story={[]} token={null} onOpen={vi.fn()} />));
+  await renderRibbon(timed, [], null);
   const ticks = Array.from(container.querySelectorAll<HTMLElement>('.slticks span'));
   expect(ticks.map(tick => tick.textContent)).toEqual(['08:00', '10:00']);
   expect(ticks.map(tick => tick.style.left)).toEqual(['0px', '50px']);
