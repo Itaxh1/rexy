@@ -8,7 +8,7 @@ import { isSetupText } from '../sessionTitle';
  *  Time-proportional placement left ~80% of a typical day empty and packed every
  *  event into an unhittable 100px band; sequence layout gives every event the same
  *  width and a real hit target, and overflow scrolls instead of compressing. */
-const PITCH = 10; // .sb flex-basis 7px + .slinner gap 3px
+export const PITCH = 10; // .sb flex-basis 7px + .slinner gap 3px
 
 /** Bars sit in chronological sequence, so time is not linear across the strip.
  *  Ticks are placed at the first event of each hour, and thinned so labels never
@@ -106,8 +106,8 @@ export default function Ribbon({
 
 /** Keep one stroke per event without mounting tens of thousands of buttons.
  * Each source has its own event sequence, so its scrolling is independent. */
-function EventLane({ events, renderEvent, onScroll }: {
-  events: Ev[]; renderEvent: (event: Ev, index: number, tabIndex: number) => ReactNode; onScroll: () => void;
+export function EventLane<T extends Ev>({ events, renderEvent, onScroll }: {
+  events: T[]; renderEvent: (event: T, index: number, tabIndex: number) => ReactNode; onScroll: () => void;
 }) {
   const viewport = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(960);

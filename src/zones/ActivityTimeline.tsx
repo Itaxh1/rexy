@@ -16,6 +16,7 @@ export default function ActivityTimeline({ day, sessions, events, story, token, 
   onMoreStory?: () => void; onReloadStory?: () => void;
 }) {
   const [expanded, setExpanded] = useState(true);
+  const [detailedRibbons, setDetailedRibbons] = useState(false);
   const detailId = useId();
   const ribbon = useMemo(() => {
     if (!loadedRibbon) return ribbonFromEvents(day, sessions, events);
@@ -31,12 +32,22 @@ export default function ActivityTimeline({ day, sessions, events, story, token, 
     {loading && !ribbon.events.length ? <div className="panel"><div className="empty" role="status">Loading overall ribbons…</div></div>
       : <Ribbon key={day} day={day} events={ribbon.events} sessions={sessions} story={story} token={token} onOpen={onOpen} />}
 
-    <div className="sec-h timeline-expanded">
+    <div className="sec-h timeline-expanded session-ribbon-heading">
       <h2>When it happened</h2>
       <span className="n">every session on its own ribbon · hover a mark to inspect</span>
+      <button type="button" className="ribbon-view-toggle" aria-label="Detailed session view"
+        aria-pressed={detailedRibbons}
+        title={detailedRibbons ? 'Show the full-day clock for both agents' : 'Zoom into individual events for both agents'}
+        onClick={() => setDetailedRibbons(value => !value)}>
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+          <circle cx="8" cy="8" r="5.5" /><path d="m12 12 5 5M5 8h6" />
+          {!detailedRibbons && <path d="M8 5v6" />}
+        </svg>
+        {detailedRibbons ? 'Full-day view' : 'Detailed view'}
+      </button>
     </div>
     {loading && !ribbon.events.length ? <div className="panel"><div className="empty" role="status">Loading session ribbons…</div></div>
-      : <SessionRibbons ribbon={ribbon} story={story} onOpen={onOpen} token={token} />}
+      : <SessionRibbons key={`sessions-${day}`} ribbon={ribbon} detailed={detailedRibbons} story={story} onOpen={onOpen} token={token} />}
 
     <div className="sec-h timeline-expanded">
       <h2>What happened</h2>

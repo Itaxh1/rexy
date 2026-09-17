@@ -72,6 +72,7 @@ describe('day ribbon maths', () => {
 describe('<SessionRibbons>', () => {
   let root: Root; let container: HTMLDivElement;
   beforeEach(() => {
+    vi.mocked(loadEvent).mockClear();
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
     container = document.createElement('div'); document.body.append(container); root = createRoot(container);
   });
@@ -129,6 +130,52 @@ describe('<SessionRibbons>', () => {
     const failed = container.querySelector('.srb-mark.failed');
     expect(failed).not.toBeNull();
     expect(failed!.textContent).toContain('❌');
+  });
+
+  it('draws individual events in detail mode, preserves off-axis handling and agent collapse', async () => {
+    await act(async () => root.render(<SessionRibbons ribbon={ribbon} detailed />));
+    expect(container.querySelectorAll('.srb-detail-track .sb')).toHaveLength(7);
+    expect(container.querySelectorAll('.srb-tick, .srb-now, .srb-mark')).toHaveLength(0);
+    expect(container.querySelector('.sb.fail')?.textContent).toContain('❌');
+    expect(container.textContent).toContain('1 outside this day');
+    expect(container.textContent).toContain('chronological, not time-spaced');
+    const head = container.querySelector<HTMLButtonElement>('.srb-agent-head')!;
+    await act(async () => head.click());
+    await act(async () => root.render(<SessionRibbons ribbon={ribbon} />));
+    expect(head.getAttribute('aria-expanded')).toBe('false');
+    expect(container.querySelectorAll('.srb-row')).toHaveLength(1);
+  });
+
+  it('windows large detailed sessions and retains keyboard access to every event', async () => {
+    const events = Array.from({ length: 5000 }, (_, i) => ev(`busy-${i}`, 'cx-a', 11 + i / 10000, 'tool'));
+    const onOpen = vi.fn();
+    await act(async () => root.render(<SessionRibbons detailed onOpen={onOpen} ribbon={{ ...ribbon,
+      off_axis_event_ids: [], sessions: [ribbon.sessions[0]!], events }} />));
+    expect(container.querySelectorAll('.sb').length).toBeLessThan(130);
+    expect(container.textContent).toContain('5,000 events');
+    const first = container.querySelector<HTMLButtonElement>('.sb')!;
+    await act(async () => first.focus());
+    await act(async () => first.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true })));
+    expect((document.activeElement as HTMLElement).dataset.index).toBe('4999');
+    await act(async () => (document.activeElement as HTMLButtonElement).click());
+    expect(onOpen).toHaveBeenCalledWith('cx-a');
+    expect(container.querySelectorAll('.sb').length).toBeLessThan(130);
+  });
+
+  it('loads single-event detail lazily and clears the tooltip when switching back', async () => {
+    vi.useFakeTimers(); vi.mocked(loadEvent).mockClear();
+    vi.mocked(loadEvent).mockResolvedValue({ id: '5', content: null, tool_input: 'npm test', tool_output: '42 passed', truncated: false });
+    const data = { ...ribbon, off_axis_event_ids: [], sessions: [ribbon.sessions[0]!], events: [ev('5', 'cx-a', 12, 'tool')] };
+    try {
+      await act(async () => root.render(<SessionRibbons ribbon={data} token="browser" detailed />));
+      expect(loadEvent).not.toHaveBeenCalled();
+      await act(async () => container.querySelector<HTMLButtonElement>('.sb')!.focus());
+      await act(async () => vi.advanceTimersByTimeAsync(120));
+      expect(loadEvent).toHaveBeenCalledWith('5', 'browser', expect.any(AbortSignal));
+      expect(container.querySelector('[role=tooltip]')?.textContent).toContain('42 passed');
+      await act(async () => root.render(<SessionRibbons ribbon={data} token="browser" />));
+      expect(container.querySelector('[role=tooltip]')).toBeNull();
+    } finally { vi.useRealTimers(); }
   });
 
   it('loads real tool previews lazily without turning source text into markup', async () => {

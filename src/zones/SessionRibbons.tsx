@@ -3,6 +3,7 @@ import { SOURCES, fmtDur, fmtMs, type EventDetail, type Story } from '../data';
 import { isSetupText } from '../sessionTitle';
 import { toolLabel } from '../eventPresentation';
 import EventPreview from '../EventPreview';
+import { EventLane, PITCH } from './Ribbon';
 import {
   CLUSTER_PX, axisPosition, axisTicks, clusterByPixel, estimatedActiveMs,
   type Cluster, type DayRibbon, type RibbonEvent, type SessionHeader,
@@ -26,11 +27,12 @@ const clusterClass = (c: Cluster) =>
 
 const timeOf = (ms: number) => new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 
-export default function SessionRibbons({ ribbon, onOpen, token = null, story = [] }: {
+export default function SessionRibbons({ ribbon, onOpen, token = null, story = [], detailed = false }: {
   ribbon: DayRibbon;
   onOpen?: (sessionId: string) => void;
   token?: string | null;
   story?: Story[];
+  detailed?: boolean;
 }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [measured, setMeasured] = useState(0);
@@ -38,6 +40,7 @@ export default function SessionRibbons({ ribbon, onOpen, token = null, story = [
   const [tip, setTip] = useState<Tip | null>(null);
   const previews = useRef(new Map<string, EventDetail>());
   useEffect(() => { previews.current.clear(); setTip(null); }, [token, ribbon]);
+  useEffect(() => { setTip(null); }, [detailed]);
 
   useLayoutEffect(() => {
     const el = trackRef.current;
@@ -58,16 +61,18 @@ export default function SessionRibbons({ ribbon, onOpen, token = null, story = [
       const list = map.get(ev.s);
       if (list) list.push(ev); else map.set(ev.s, [ev]);
     }
+    for (const events of map.values()) events.sort((a, b) => a.t - b.t);
     return map;
   }, [ribbon.events]);
 
   const clusters = useMemo(() => {
     const map = new Map<string, Cluster[]>();
+    if (detailed) return map;
     for (const [id, evs] of bySession) {
       map.set(id, clusterByPixel(evs.filter(e => !offAxis.has(e.id)), ribbon.axis, width));
     }
     return map;
-  }, [bySession, offAxis, ribbon.axis, width]);
+  }, [bySession, offAxis, ribbon.axis, width, detailed]);
 
   const ticks = useMemo(() => axisTicks(ribbon.axis), [ribbon.axis]);
   const now = Date.now();
@@ -94,14 +99,14 @@ export default function SessionRibbons({ ribbon, onOpen, token = null, story = [
   const grid = (pos: number) => ({ left: pos * width });
 
   return (
-    <div className="panel srb" onMouseLeave={() => setTip(null)}>
+    <div className={`panel srb${detailed ? ' srb-detailed' : ''}`} onMouseLeave={() => setTip(null)}>
       <div className="srb-grid srb-axis" aria-hidden="true">
-        <div className="srb-zone">Local time</div>
+        <div className="srb-zone">{detailed ? 'Event order' : 'Local time'}</div>
         <div className="srb-track srb-ticks" ref={trackRef}>
-          {ticks.map(t => (
+          {detailed ? <span className="srb-detail-note">One mark per event · scroll each session for more</span> : ticks.map(t => (
             <span key={t.ms} className={`srb-tick${t.edge ? ` ${t.edge}` : ''}`} style={grid(t.pos)}>{t.label}</span>
           ))}
-          {nowPos !== null && <span className="srb-tick srb-now-label" style={grid(nowPos)}>Now</span>}
+          {!detailed && nowPos !== null && <span className="srb-tick srb-now-label" style={grid(nowPos)}>Now</span>}
         </div>
       </div>
 
@@ -157,7 +162,26 @@ export default function SessionRibbons({ ribbon, onOpen, token = null, story = [
                     </div>
                   </div>
 
-                  <div className="srb-track">
+                  {detailed ? <div className="srb-detail-track">
+                    <EventLane events={own.filter(e => !offAxis.has(e.id))} onScroll={() => setTip(null)}
+                      renderEvent={(ev, i, tabIndex) => {
+                        const cluster = () => clusterByPixel([ev], ribbon.axis, width)[0]!;
+                        return <button key={ev.id} type="button" data-index={i} tabIndex={tabIndex}
+                          className={`sb ${ev.k === 'tool' && ev.st === 'failed' ? 'fail' : ev.k === 'tool' && ev.st === 'running' ? 'running' : ev.k}`}
+                          style={{ left: i * PITCH }} aria-label={`${timeOf(ev.t)}, ${eventTitle(ev)}`}
+                          onMouseEnter={e => showTip(e, cluster(), session)}
+                          onMouseMove={e => showTip(e, cluster(), session)} onMouseLeave={() => setTip(null)}
+                          onFocus={e => {
+                            const r = e.currentTarget.getBoundingClientRect();
+                            setTip({ cluster: cluster(), session, x: r.left + r.width / 2, y: r.bottom });
+                          }}
+                          onBlur={() => setTip(null)} onKeyDown={e => { if (e.key === 'Escape') setTip(null); }}
+                          onClick={() => onOpen?.(session.id)}>
+                          {ev.k === 'tool' && ev.st === 'failed' && <span className="ribbon-marker" aria-hidden="true">❌</span>}
+                          {ev.st === 'interrupted' && <span className="ribbon-marker" aria-hidden="true">🛑</span>}
+                        </button>;
+                      }} />
+                  </div> : <div className="srb-track">
                     {ticks.map(t => <i key={t.ms} className="srb-line" style={grid(t.pos)} />)}
                     {nowPos !== null && <i className="srb-now" style={grid(nowPos)} />}
                     <i className={`srb-span${fromBefore ? ' from-before' : ''}${intoAfter ? ' into-after' : ''}`}
@@ -186,7 +210,7 @@ export default function SessionRibbons({ ribbon, onOpen, token = null, story = [
                       </button>
                       );
                     })}
-                  </div>
+                  </div>}
                 </div>
               );
             })}
@@ -199,7 +223,7 @@ export default function SessionRibbons({ ribbon, onOpen, token = null, story = [
         <span><i className="srb-key agent" />Agent replied</span>
         <span><i className="srb-key prompt" />You asked</span>
         <span><i className="srb-key failed" />Failed ❌</span>
-        <span className="srb-legend-note">Taller = more events · each mark ≈ {minutesPerMark} min</span>
+        <span className="srb-legend-note">{detailed ? 'One mark = one event · chronological, not time-spaced' : `Taller = more events · each mark ≈ ${minutesPerMark} min`}</span>
       </div>
 
       {tip && <ClusterTip key={tip.cluster.key} tip={tip} story={story} token={token} cache={previews.current} />}

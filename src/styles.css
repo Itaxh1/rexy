@@ -360,6 +360,14 @@ main{max-width:1260px;margin:0 auto;padding:20px 16px 80px}
 .token-usage .toks>strong{min-width:90px;font-size:12px;font-weight:600}
 .usage-note{margin:0;padding:0 16px 12px;color:var(--ink-3);font-size:11px;line-height:1.5}
 .timeline-toggle{margin-left:auto;white-space:nowrap}
+.session-ribbon-heading{flex-wrap:wrap}
+.ribbon-view-toggle{margin-left:auto;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;padding:5px 9px;
+  background:var(--surface);color:var(--ink);border:1px solid var(--border);border-radius:6px;font:inherit;font-size:12px;cursor:pointer}
+.ribbon-view-toggle:hover,.ribbon-view-toggle[aria-pressed="true"]{background:var(--surface-2)}
+.ribbon-view-toggle:focus-visible{outline:2px solid var(--sel-bg);outline-offset:2px}
+.srb-detail-track{min-width:0;padding:8px 0 0}
+.srb-detail-note{display:block;padding-top:10px;color:var(--ink-3);font-size:11px}
+.srb-detailed .srb-key.prompt{height:12px;vertical-align:-2px}
 .timeline-summaries{list-style:none;margin:0;padding:0}
 .timeline-summaries>li{padding:14px 20px;border-top:1px solid var(--border)}
 .timeline-summaries>li:first-child{border-top:0}

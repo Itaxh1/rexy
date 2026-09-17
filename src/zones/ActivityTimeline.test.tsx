@@ -89,7 +89,8 @@ it('uses backend totals and does not invent zero usage for an unavailable source
 it('shows zero for a confirmed inactive agent, without zeroing unknown or loading usage', async () => {
   await act(async () => root.render(<TokenUsage inactiveSources={['claude-code']} />));
   let rows = container.querySelectorAll('.toks');
-  expect(rows[0].textContent).toBe('Claude Code0total tokens');
+  expect(rows[0].textContent).toBe('Claude Code0total tokens0fresh input0cached input0cache writes0output0thinking, included in output');
+  expect(Array.from(rows[0].querySelectorAll('b')).map(field => field.textContent)).toEqual(['0', '0', '0', '0', '0', '0']);
   expect(rows[1].textContent).toBe('CodexUsage unavailable');
   await act(async () => root.render(<TokenUsage inactiveSources={['claude-code']} loading />));
   rows = container.querySelectorAll('.toks');
@@ -97,6 +98,42 @@ it('shows zero for a confirmed inactive agent, without zeroing unknown or loadin
   await act(async () => root.render(<TokenUsage inactiveSources={['claude-code']}
     usage={{ 'claude-code': { in: 10, cr: 0, cw: 0, out: 20, th: 0, total: 30 } }} />));
   expect(container.querySelector('.toks')?.textContent).toContain('Claude Code30total tokens');
+});
+
+it('shows the complete breakdown when recorded token usage is genuinely zero', async () => {
+  await act(async () => root.render(<TokenUsage usage={{ codex: { in: 0, cr: 0, cw: 0, out: 0, th: 0, total: 0 } }} />));
+  const rows = container.querySelectorAll('.toks');
+  expect(rows[0].textContent).toContain('Usage unavailable');
+  expect(rows[1].querySelectorAll('b')).toHaveLength(6);
+  expect(rows[1].textContent).toContain('0cache writes');
+  expect(rows[1].textContent).toContain('0thinking, included in output');
+});
+
+it('uses one toggle for detailed session ribbons across both agents, leaving the overall view unchanged', async () => {
+  const claude = { ...session, id: 'claude', src: 'claude-code' as const, title: 'Fix the collector' };
+  const mixed = [...events, { ...events[0], id: 'claude-prompt', s: claude.id, src: claude.src }]
+    .map((event, i) => ({ ...event, t: new Date(2026, 8, 4, 12).getTime() + i }));
+  const onOpen = vi.fn();
+  await act(async () => root.render(<ActivityTimeline day={session.d} sessions={[session, claude]}
+    events={mixed} story={[]} token={null} onOpen={onOpen} />));
+  const toggle = container.querySelector<HTMLButtonElement>('[aria-label="Detailed session view"]')!;
+  const overview = container.querySelector('.overall-ribbons');
+  expect(toggle.getAttribute('aria-pressed')).toBe('false');
+  expect(container.querySelector('.srb-detailed')).toBeNull();
+  await act(async () => toggle.click());
+  expect(toggle.getAttribute('aria-pressed')).toBe('true');
+  expect(toggle.textContent).toBe('Full-day view');
+  expect(container.querySelectorAll('.srb-detailed .srb-detail-track')).toHaveLength(2);
+  expect(container.querySelectorAll('.srb-detailed .sb')).toHaveLength(3);
+  expect(container.querySelector('.srb')?.textContent).not.toContain('Local time');
+  expect(container.querySelector('.overall-ribbons')).toBe(overview);
+  await act(async () => container.querySelector<HTMLButtonElement>('.srb-detailed .sb')!.click());
+  expect(onOpen).toHaveBeenCalledWith('claude');
+  expect(loadEvent).not.toHaveBeenCalled();
+  await act(async () => toggle.click());
+  expect(container.querySelectorAll('.srb-detail-track')).toHaveLength(0);
+  expect(container.querySelectorAll('.srb-row')).toHaveLength(2);
+  expect(container.querySelector('.srb')?.textContent).toContain('Local time');
 });
 
 it('uses the same resolved session name in live ribbons and the summary list', async () => {
